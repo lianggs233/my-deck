@@ -2,9 +2,9 @@
 
 - 文件版本：V0.5
 - 更新日期：2026-11-17
-- 需求基準：`docs/requirements.md` V0.19
+- 需求基準：`docs/requirements.md` V0.20
 - 拆分基準：`docs/breakdown.md` V0.23
-- 權限基準：`docs/permissions.md` V0.8
+- 權限基準：`docs/permissions.md` V0.9
 - 技術基準：`docs/tech-stack.md` V0.4
 - 狀態：48 個具名設計切片已全部輸出 Penpot；本輪同步 MVP 已批准的非課堂個人標註入口，外部交付連結仍待核對
 

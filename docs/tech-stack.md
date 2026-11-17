@@ -3,9 +3,9 @@
 - 文件版本：V0.4
 - 文件狀態：Python 後端、前端 Vite 與 lint 方向已由使用者確認；其餘供應商與部署細節待確認
 - 更新日期：2026-11-17
-- 需求基準：`docs/requirements.md` V0.19
+- 需求基準：`docs/requirements.md` V0.20
 - MVP 基準：`docs/mvp-priority.md` V0.3
-- 權限基準：`docs/permissions.md` V0.8
+- 權限基準：`docs/permissions.md` V0.9
 
 ## 1. 方案目標與原則
 

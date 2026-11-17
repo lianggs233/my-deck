@@ -4,9 +4,9 @@
 - 文件狀態：已按使用者「按建議方案吧」確認 MVP 範圍；P0 仍需再切 MVP-S 以符合 6 天
 - 建立時間：2026-11-17 10:16:05 HKT
 - 確認時間：2026-11-17 17:09:38 HKT
-- 需求基準：`docs/requirements.md` V0.19
+- 需求基準：`docs/requirements.md` V0.20
 - 拆分基準：`docs/breakdown.md` V0.23
-- 權限基準：`docs/permissions.md` V0.8
+- 權限基準：`docs/permissions.md` V0.9
 - 技術基準：`docs/tech-stack.md` V0.4
 
 ## 1. MVP 目標與已確認假設

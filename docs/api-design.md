@@ -25,6 +25,7 @@
 ### 2.1 認證與 CSRF
 
 登入、工作階段、CSRF、角色及資源權限的 FastAPI／React 實作約定，以 `docs/auth-permission-design.md` V0.2 為準；本文件中的端點與錯誤格式須與該方案一致。
+- Schema 契約：`docs/api-schemas.md` V0.1；所有 request／response、共用 model、Socket.IO payload 及錯誤 envelope 以該文件為單一欄位基準，避免前後端雙份定義漂移。
 
 - 登入後由伺服端簽發 `HttpOnly`、`Secure`、`SameSite=Lax` 的 Session Cookie。
 - 所有 Cookie 認證的修改請求必須驗證 `X-CSRF-Token`。

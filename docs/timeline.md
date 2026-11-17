@@ -34,6 +34,7 @@
 | 補充設計 | 登入、工作階段與權限方案 V0.1 | 2026-11-17 22:10:16 HKT | 2026-11-17 22:10:16 HKT | 待確認 | `docs/auth-permission-design.md`；依使用者前後端并行開發及優先定義 API 的要求，記錄註冊 challenge、登入、Session、CSRF、FastAPI 角色／資源 dependency、MVP 權限落地及 OpenAPI 型別生成流程；未建立應用程式或測試用例 |
 | 補充設計 | 管理員分類權限方案 V0.2 | 2026-11-17 22:26:26 HKT | 2026-11-17 22:26:26 HKT | 已完成 | 使用者確認 PERM-Q-003／004／005／006／008 建議方案；已同步 requirements V0.20、permissions V0.9、auth-permission-design V0.2 及跨文件基準；管理員內容查看預設關閉，個人標註不可見，MVP 不建管理介面但服務端仍須強制執行權限 |
 | 補充設計 | 完整 API 契約 V0.4 | 2026-11-17 22:39:23 HKT | 2026-11-17 22:39:23 HKT | 已完成 | `docs/api-design.md`；由 MVP P0 擴充至 REQ-001～REQ-018 的 REST／Socket.IO 契約，補齊即時課堂、共享標註、簽到答題、摘要匯出刪除、管理員 scopes、錯誤碼及 OpenAPI 前後端生成；P1／P2 不納入 6 天 MVP，不建立測試 |
+| 補充設計 | API Schema V0.1 | 2026-11-17 23:02:23 HKT | 2026-11-17 23:02:23 HKT | 已完成 | `docs/api-schemas.md`；補齊 P0 與完整產品的 request／response、共用 model、認證、權限、標註、課堂、活動、匯出、管理員 audit、Socket.IO payload、錯誤 envelope 及 Endpoint↔schema 對應；`docs/api-design.md` V0.4 已引用為單一欄位基準，供 FastAPI／OpenAPI 及前端型別生成使用 |
 | 2. 需求拆分與小時估算 | 第 12 輪，REQ-001／V0.12 | 2026-11-16 21:07:26 HKT | 2026-11-16 21:09:03 HKT | 已完成 | `docs/breakdown.md`；新增 TASK-080 首頁個人圖標、帳號選單及個人中心入口，調整 TASK-030 登出入口；REQ-001 為 45 小時，累計 118.5 小時 |
 | 2. 需求拆分與小時估算 | 第 1 輪，REQ-001／V0.1 | 2026-11-16 14:33:11 HKT | 2026-11-16 14:36:23 HKT | 待確認 | `docs/breakdown.md`；REQ-001 已拆分為 18 項互動任務，估算 64 小時；其餘 REQ 尚未拆分 |
 | 2. 需求拆分與小時估算 | 第 2 輪，REQ-001／V0.2 | 2026-11-16 15:33:13 HKT | 2026-11-16 15:35:51 HKT | 待確認 | `docs/breakdown.md`；TASK-008 調整為 8 小時，REQ-001 總計 68 小時 |

@@ -1,11 +1,11 @@
 # My Deck 開發技術棧方案
 
-- 文件版本：V0.3
+- 文件版本：V0.4
 - 文件狀態：Python 後端、前端 Vite 與 lint 方向已由使用者確認；其餘供應商與部署細節待確認
 - 更新日期：2026-11-17
-- 需求基準：`docs/requirements.md` V0.17
-- MVP 基準：`docs/mvp-priority.md` V0.1
-- 權限基準：`docs/permissions.md` V0.6
+- 需求基準：`docs/requirements.md` V0.19
+- MVP 基準：`docs/mvp-priority.md` V0.3
+- 權限基準：`docs/permissions.md` V0.8
 
 ## 1. 方案目標與原則
 
@@ -63,7 +63,7 @@
 | 前端測試工具 | Vitest + React Testing Library | 元件、表單及狀態交互 |
 | API／整合測試工具 | **pytest + HTTPX + Testcontainers** | 真實 PostgreSQL／Redis 整合驗證 |
 | 端到端工具 | Playwright | Edge／Chrome 核心流程與不同角色權限 |
-| 容量驗證工具 | k6 | 100 總並發及事件至完成更新的 0–300ms 驗證 |
+| 容量驗證工具 | k6 | 100 總並發及事件至完成更新的 0–300 ms 驗證 |
 | 程式品質 | ESLint + Prettier + Stylelint；**Ruff + mypy** | 前後端格式、型別、品質及 rem 設計規範 |
 | CI | GitHub Actions | 安裝、lint、型別檢查、測試、構建及 Docker image 檢查 |
 | 本地開發 | Docker Compose | Web、FastAPI、Celery worker、PostgreSQL、Redis、Mailpit 及轉換依賴 |
@@ -245,7 +245,6 @@ S3 bucket 分區保存：
 coursewares/{coursewareId}/original/...
 coursewares/{coursewareId}/slides/{attemptId}/...
 classrooms/{classroomId}/exports/{exportJobId}/...
-deletion-records/{recordId}.txt
 ```
 
 - Bucket 預設完全私有，啟用加密、版本／生命周期策略及必要的存取日誌。
@@ -311,7 +310,7 @@ deletion-records/{recordId}.txt
 ### 8.3 Web 與 API 安全
 
 - 嚴格 CORS、同源 CSP、安全 headers 及 request body 限制。
-- Cookie 寫入操作檢查 `Origin`，必要時加入 CSRF token；python-socketio 同樣驗證 Origin 與工作階段。
+- 所有 Cookie 寫入操作必須檢查 `Origin`，並按 `docs/api-design.md` 要求 CSRF Token；python-socketio 同樣驗證 Origin 與工作階段。
 - 所有輸入由後端 Pydantic 驗證，資料庫查詢使用 SQLAlchemy 參數化，不拼接 SQL。
 - 上傳與轉換視為不可信邊界；不能因副檔名正確就信任內容。
 - 日誌只記錄 request/task ID、狀態及錯誤碼，不記錄密碼、驗證碼、Cookie、完整 token 或私密標註內容。
@@ -351,7 +350,7 @@ deletion-records/{recordId}.txt
 | 即時 | 多客戶端 Socket 測試；版本亂序、快照、重連及角色隔離 |
 | 端到端 | Playwright；老師建立課件到學生標註的最小閉環 |
 | 檔案 | 真實 PPT/PPTX 樣本；加密、損毀、100 MiB 邊界、100 頁邊界及缺頁 |
-| 容量 | k6 + 瀏覽器時間戳；100 總並發下量測發送至其他端完成更新 0–300ms |
+| 容量 | k6 + 瀏覽器時間戳；100 總並發下量測發送至其他端完成更新 0–300 ms |
 | CI | 每個變更執行前後端 lint、型別、測試與構建；不通過不部署 |
 
 本節只是工具與驗證策略，**不代替尚未到流程階段的 `docs/test-cases.md`**。
@@ -406,9 +405,9 @@ deletion-records/{recordId}.txt
 | TECH-Q-002 | SMS／Email 生產供應商 | 需確認 `+852` 支援、發送資格、費用及資料處理地區；adapter 防止鎖定供應商 |
 | TECH-Q-003 | 真實 PPT 相容性及 5 分鐘目標 | 必須提供代表性課件做 LibreOffice 樣本驗證；這是最大技術風險 |
 | TECH-Q-004 | `.ppt` 匯出品質 | python-pptx 原生輸出 PPTX，舊 PPT 依賴 LibreOffice 二次轉換，需用真實結果驗收 |
-| TECH-Q-005 | MVP-S 最終範圍 | 目前 `docs/mvp-priority.md` 仍待確認；若保留完整 P0，6 天時間盒仍有風險 |
+| TECH-Q-005 | MVP-S 最終範圍 | `docs/mvp-priority.md` V0.3 的 P0 已確認，但 P0 仍超出 6 天時間盒；MVP-S 最小交付切片尚待確認 |
 | TECH-Q-006 | 外部通知與資料地區 | 手機／電郵供應商可能處理識別資料；需最少化內容、確認合規並記錄例外邊界 |
-| TECH-Q-007 | 100 並發下 300ms 的驗收環境 | 需固定服務地區、量測起訖點及瀏覽器預設網絡條件，避免只量 API 回應時間 |
+| TECH-Q-007 | 100 並發下 300 ms 的驗收環境 | 需固定服務地區、量測起訖點及瀏覽器預設網絡條件，避免只量 API 回應時間 |
 | TECH-Q-008 | JS／Python `zxcvbn` 兼容 | 必須鎖定算法、字典及參數並通過共同樣本；不能假定不同語言 port 自然一致 |
 
 ## 15. 方案結論
@@ -417,4 +416,4 @@ deletion-records/{recordId}.txt
 
 **React + Mantine + TypeScript + Vite／ESLint + Prettier + Stylelint／FastAPI + Python／SQLAlchemy + Alembic／PostgreSQL／Redis + Celery／python-socketio／私有 S3／隔離 LibreOffice + Pillow worker／Docker Compose 起步，部署於香港。**
 
-這套方案讓 6 天 MVP 保持單體與少元件，同時利用 Python 的 PPT、圖片及資料處理生態，為完整課堂的 100 總並發、300ms 狀態同步、PPT 背景轉換、個人標註隔離、匯出及 168 小時保存提供明確擴充路徑。
+這套方案讓 6 天 MVP 保持單體與少元件，同時利用 Python 的 PPT、圖片及資料處理生態，為完整課堂的 100 總並發、300 ms 狀態同步、PPT 背景轉換、個人標註隔離、匯出及 168 小時保存提供明確擴充路徑。

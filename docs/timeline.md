@@ -28,6 +28,9 @@
 | 1. 輸出需求 | 第 19 輪，Python 後端決策／需求 V0.16／技術棧 V0.2 | 2026-11-17 15:23:29 HKT | 2026-11-17 15:30:46 HKT | 已完成 | 使用者明確確認「改用python」；`docs/tech-stack.md` 已改為 FastAPI／SQLAlchemy／Alembic／Celery／python-socketio／python-pptx；`docs/requirements.md` 新增 NFR-014、CON-007、DEC-031，並將 zxcvbn 改為跨語言共同測試向量驗收；其餘供應商風險保留 |
 | 1. 輸出需求 | 第 20 輪，前端 Vite 與 lint／需求 V0.17／技術棧 V0.3 | 2026-11-17 15:56:44 HKT | 2026-11-17 16:02:20 HKT | 已完成 | 使用者要求「前端加入vite 和 lint」；`docs/tech-stack.md` 與 `docs/requirements.md` 已明確 Vite 建置、TypeScript strict、ESLint／Prettier／Stylelint、品質腳本與 CI 驗收，新增 NFR-015、CON-008、DEC-032；Python 後端不變 |
 | 補充設計 | MVP API 設計 V0.1 | 2026-11-17 16:16:36 HKT | 2026-11-17 16:16:36 HKT | 待確認 | `docs/api-design.md`；按 P0 MVP 及 FastAPI 技術棧設計 REST／JSON API，涵蓋帳號、課程、私有 PPT 上傳／轉換／預覽及個人文字標註，並定義 Cookie／CSRF、冪等、錯誤格式、分頁、權限與最小資料約束；未建立應用程式或測試用例 |
+| 補充檢查 | 全部 docs 一致性審查 | 2026-11-17 16:27:27 HKT | 2026-11-17 17:02:18 HKT | 已完成 | 已完成 8 份文件審查及一致性修正；同步版本與基準，修正驗證碼、TXT、師生課件回應、註冊內容綁定、標註 PATCH、NFR 追蹤、依賴及切片邊界；該輪驗證為 332 項、515 小時；MVP 合法標註入口已於後續確認，Penpot 外部交付仍待同步 |
+| 補充設計 | MVP 建議方案確認與同步 | 2026-11-17 17:09:38 HKT | 2026-11-17 17:28:52 HKT | 已完成 | 使用者以「按建議方案吧」確認非課堂個人標註例外、REQ-003 暫緩及預建演示資料、即時課堂維持 P1、只做個人標註、不做管理員後台；已同步 requirements V0.19、permissions V0.8、mvp-priority V0.3、api-design V0.3、breakdown V0.23、page-slices V0.5、tech-stack V0.4；全量為 333 項、517 小時；Penpot 外部連結及外部看板工時仍待同步 |
+| 補充檢查 | 全 docs 需求覆蓋與 MVP 一致性複查 | 2026-11-17 17:30:13 HKT | 2026-11-17 17:30:13 HKT | 已完成 | 依使用者「檢查所有docs，確保符合用戶所有需求」完成：requirements V0.19、permissions V0.8、breakdown V0.23、tech-stack V0.4、mvp-priority V0.3、api-design V0.3、page-slices V0.5、timeline；對齊非課堂個人標註例外、REQ-003 暫緩、P0 169.5 小時、333 項／517 小時及跨文件引用；Penpot 外部連結及外部看板工時仍待同步，未建立測試 |
 | 2. 需求拆分與小時估算 | 第 12 輪，REQ-001／V0.12 | 2026-11-16 21:07:26 HKT | 2026-11-16 21:09:03 HKT | 已完成 | `docs/breakdown.md`；新增 TASK-080 首頁個人圖標、帳號選單及個人中心入口，調整 TASK-030 登出入口；REQ-001 為 45 小時，累計 118.5 小時 |
 | 2. 需求拆分與小時估算 | 第 1 輪，REQ-001／V0.1 | 2026-11-16 14:33:11 HKT | 2026-11-16 14:36:23 HKT | 待確認 | `docs/breakdown.md`；REQ-001 已拆分為 18 項互動任務，估算 64 小時；其餘 REQ 尚未拆分 |
 | 2. 需求拆分與小時估算 | 第 2 輪，REQ-001／V0.2 | 2026-11-16 15:33:13 HKT | 2026-11-16 15:35:51 HKT | 待確認 | `docs/breakdown.md`；TASK-008 調整為 8 小時，REQ-001 總計 68 小時 |
@@ -65,5 +68,5 @@
 | 4. 使用者明確確認原型 | 第 5 輪，REQ-001～REQ-018 全頁面切片 | 2026-11-17 11:02:06 HKT | 進行中 | 待確認 | 等待使用者確認 Penpot `my-deck`／`Page 1` 的 48 個具名切片、14 條流程及主要交互；未確認前不建立測試用例 |
 | 4. 使用者明確確認原型 | 第 6 輪，ERD 置中及右側備注版 | 2026-11-17 12:16:15 HKT | 進行中 | 待確認 | 等待使用者確認 Penpot `my-deck`／`ERD` 的置中實體、右側備注及直線關係版面；ERD 調整不代替 UI 原型確認，未確認 UI 原型前不建立測試用例 |
 | 4. 使用者明確確認原型 | 第 7 輪，ERD 方向箭頭、基數及整合圖例版 | 2026-11-17 12:48:50 HKT | 進行中 | 待確認 | 等待使用者確認 Penpot `my-deck`／`ERD` 的方向箭頭、1:N／N:N 標記及右欄整合圖例；ERD 調整不代替 UI 原型確認，未確認 UI 原型前不建立測試用例 |
-| 4. 使用者明確確認原型 | 第 8 輪，6 天 MVP Wireframe | 2026-11-17 14:15:10 HKT | 進行中 | 待確認 | 等待使用者確認 Penpot `my-deck`／`mvp` 的 P0 暫定範圍、三泳道 15 張線框卡及不交叉流程；範圍仍依待確認的 `docs/mvp-priority.md` V0.1；未確認前不建立測試用例 |
+| 4. 使用者明確確認原型 | 第 8 輪，6 天 MVP Wireframe | 2026-11-17 14:15:10 HKT | 進行中 | 待確認 | 等待使用者確認 Penpot `my-deck`／`mvp` 的 P0 範圍、三泳道 15 張線框卡及不交叉流程；範圍已按 `docs/mvp-priority.md` V0.3 及已確認方案更新，仍需使用者確認原型；未確認前不建立測試用例 |
 | 5. 輸出測試用例 | 未開始 | 未開始 | 未開始 | 未開始 | `docs/test-cases.md` 尚未建立 |

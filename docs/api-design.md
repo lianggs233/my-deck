@@ -1,46 +1,87 @@
 # My Deck MVP API 設計
 
-- 文件版本：V0.1
-- 文件狀態：待確認
-- 建立時間：2026-11-17 16:16:36 HKT
-- 適用範圍：`docs/mvp-priority.md` V0.1 的 P0 MVP
-- 需求基準：`docs/requirements.md` V0.17、`docs/permissions.md` V0.6
-- 技術基準：`docs/tech-stack.md` V0.3，後端採 FastAPI
-- 範圍假設：「標簽功能」暫按 **PPT 個人文字標註**設計；課程分類標籤不在本版
+- 文件版本：V0.3
+- 文件狀態：已同步使用者確認的 MVP 方案；完整 API 契約仍待實作確認
+- 更新時間：2026-11-17 HKT
+- 適用範圍：`docs/mvp-priority.md` V0.3 的 P0／可選 P0 候選範圍；**完整 P0 契約不是已確認 6 天全部交付清單**
+- 需求基準：`docs/requirements.md` V0.19
+- 權限基準：`docs/permissions.md` V0.8
+- 技術基準：`docs/tech-stack.md` V0.4
+- API 風格：FastAPI、REST/JSON，統一前綴 `/api/v1`
+- 「標籤功能」已確認為 PPT 個人文字標註；若日後改指課程分類標籤，須另設 CourseTag API
 
 ## 1. 設計原則
 
-1. 基礎路徑為 `/api/v1`；資源名稱使用小寫英文及連字號。
-2. 一般請求與回應使用 JSON；檔案本體透過私有物件儲存的上傳 URL 傳輸，不由 FastAPI 進程長時間持有 100 MiB 請求內容。
-3. 身份、角色、課程歸屬及資源所有權一律由服務端根據工作階段判定，不接受用戶端指定操作者 ID。
-4. 建立課程、加入課程、完成上傳、重新轉換及建立標註均須支援安全重試。
-5. 所有時間使用 UTC ISO 8601；檔案大小使用 bytes；標註座標使用相對頁面寬高的 `0–1` 浮點數。
-6. 本版只設計 P0；即時課堂、共享標註、簽到、答題、統計、匯出、刪除及管理員 API 不在本版。
+1. 瀏覽器不直接信任用戶端提交的身份、角色、課程歸屬、課件版本或標註作者。
+2. 工作階段使用伺服端 Session；瀏覽器只保存安全 Cookie，不在 localStorage 保存密碼或敏感資料。
+3. 寫入介面使用統一錯誤格式；欄位錯誤與業務拒絕分開表示。
+4. 建立課程、加入課程、發送註冊驗證碼、完成註冊、完成上傳、重新轉換及建立標註均須支援安全重試；註冊驗證碼 challenge 必須綁定完整註冊內容，防止驗證後替換資料。
+5. 轉換以背景工作執行，API 只提交工作及查詢狀態，不在請求內等待完整轉換。
+6. PPT 原檔、轉換資源及個人標註均須按課程／課堂與作者授權。
+7. 已批准的非課堂例外：已加入課程學生可在本人課程頁預覽轉換成功課件並管理本人個人標註；不得延伸至未加入課程、共享標註、回覆、匯出或即時課堂。REQ-003 完整加入流程在 6 天 MVP 暫緩，但本契約保留完整產品端點。
 
 ## 2. 通用約定
 
 ### 2.1 認證與 CSRF
 
-- 登入成功後以 `Secure`、`HttpOnly`、`SameSite=Lax` 的 `mydeck_session` Cookie 維持工作階段。
-- 所有會改變資料的請求，除登入及註冊相關端點外，必須帶 `X-CSRF-Token`；Token 由登入或 `GET /auth/me` 回應取得。
-- 前端與 API 在正式環境使用相同站點；開發環境由 Vite proxy 轉發，避免跨站 Cookie 差異。
+- 登入後由伺服端簽發 `HttpOnly`、`Secure`、`SameSite=Lax` 的 Session Cookie。
+- 所有 Cookie 認證的修改請求必須驗證 `X-CSRF-Token`。
+- 註冊、登入前可從 `GET /api/v1/auth/csrf` 取得 CSRF Token；登入及重設工作階段後重新簽發。
 
-### 2.2 冪等
+### 2.2 請求標頭
 
-以下端點必須接受 `Idempotency-Key`：
+| 標頭 | 必要時機 | 用途 |
+|---|---|---|
+| `Content-Type: application/json` | JSON 請求 | 請求格式 |
+| `X-CSRF-Token` | Cookie 認證下的修改請求 | 防止跨站請求偽造 |
+| `Idempotency-Key` | 下列可重試建立／提交請求 | 同一操作安全重試 |
+| `If-Match` 或 `expectedVersion` | 標註修改／刪除 | 樂觀鎖，避免覆蓋較新版本 |
+
+必須支援冪等的介面：
 
 - `POST /courses`
-- `POST /courses/join`
-- `POST /courses/{courseId}/coursewares/uploads`
-- `POST /courses/{courseId}/coursewares/uploads/{uploadId}/complete`
-- `POST /coursewares/{coursewareId}/conversion-attempts`
-- `POST /coursewares/{coursewareId}/pages/{pageNumber}/annotations`
+- `POST /course-memberships/join`（可選 P0）
+- `POST /courses/{courseId}/coursewares/{coursewareId}/upload/complete`
+- `POST /courses/{courseId}/coursewares/{coursewareId}/conversion-attempts`
+- `POST /courses/{courseId}/coursewares/{coursewareId}/annotations`
+- `POST /auth/register/verification-codes`
+- `POST /auth/register`
 
-同一使用者的相同 Key 與相同請求內容返回原結果；相同 Key 但內容不同返回 `409 IDEMPOTENCY_CONFLICT`。加入課程及標註另以業務唯一鍵兜底。
+同一 key 重試返回原結果；不同操作使用不同 key；驗證碼發送冪等不得繞過重發間隔與發送限流，註冊冪等不得繞過 challenge 綁定。
 
-### 2.3 分頁
+### 2.3 統一錯誤格式
 
-查詢參數：`page` 從 1 開始，`pageSize` 預設 20、最大 50。
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "請修正標示的欄位",
+    "fields": {
+      "code": "課程碼必須為 8 位有效字元"
+    },
+    "requestId": "req_01..."
+  }
+}
+```
+
+常用 HTTP 狀態：
+
+- `400`：JSON、欄位或狀態前置條件錯誤。
+- `401`：未登入或工作階段失效。
+- `403`：已登入但無權、CSRF 失敗或角色不符。
+- `404`：資源不存在；不可因此泄露他人私有資源。
+- `409`：重複操作、版本衝突或資源狀態不允許。
+- `413`：檔案超過 100 MiB。
+- `422`：課件結構、頁數、加密或內容無法解析。
+- `429`：登入、驗證碼、課程碼、課堂碼或無效嘗試限流。
+
+### 2.4 列表分頁
+
+```text
+GET ...?page=1&pageSize=20
+```
+
+回應：
 
 ```json
 {
@@ -51,40 +92,37 @@
 }
 ```
 
-### 2.4 錯誤格式
+## 3. 帳號與工作階段 API
+
+### 3.1 取得 CSRF Token
+
+```http
+GET /api/v1/auth/csrf
+```
+
+### 3.2 發送註冊／密碼重設驗證碼
+
+```http
+POST /api/v1/auth/register/verification-codes
+POST /api/v1/auth/password-reset/verification-codes
+```
+
+註冊發送驗證碼時必須提交完整註冊資料，服務端先完成全部格式、角色、密碼強度及識別資料可用性校驗，再建立 challenge 並發送：
 
 ```json
 {
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "請檢查輸入內容",
-    "fields": {
-      "displayName": "顯示名稱須為 2–30 個字元"
-    },
-    "requestId": "req_01J..."
-  }
+  "identifier": "+85291234567",
+  "displayName": "陳老師",
+  "role": "TEACHER",
+  "password": "使用者密碼"
 }
 ```
 
-常用 HTTP 狀態：`400` 格式錯誤、`401` 未登入或工作階段失效、`403` 無權、`404` 資源不存在或不可見、`409` 狀態／唯一性衝突、`413` 檔案過大、`422` 業務校驗失敗、`429` 限流、`500` 服務失敗。限流回應附 `Retry-After`。
-
-## 3. 帳號與工作階段
-
-### 3.1 端點
-
-| 方法 | 路徑 | 用途 | 成功回應 |
-|---|---|---|---|
-| POST | `/auth/register/verification-codes` | 發送註冊擁有者驗證碼 | 202 |
-| POST | `/auth/register` | 驗證碼校驗並建立老師或學生帳號 | 201，同時建立工作階段 |
-| POST | `/auth/login` | 手機號碼或電郵加密碼登入 | 200 |
-| POST | `/auth/logout` | 登出目前裝置 | 204 |
-| GET | `/auth/me` | 取得目前使用者、角色及 CSRF Token | 200 |
-
-### 3.2 發送註冊驗證碼
+密碼重設發送驗證碼只需：
 
 ```json
 {
-  "identifier": "user@example.com"
+  "identifier": "+85291234567"
 }
 ```
 
@@ -92,317 +130,402 @@
 
 ```json
 {
-  "verificationId": "ver_01J...",
-  "maskedIdentifier": "u***@example.com",
-  "expiresAt": "2026-11-17T08:30:00Z",
+  "challengeId": "vc_01...",
+  "delivery": "SMS",
   "resendAfterSeconds": 60
 }
 ```
 
-手機只接受香港 `+852` 8 位本地號碼，服務端正規化為 `+852XXXXXXXX`；電郵按既有需求校驗。回應不得暴露驗證碼。
+- 註冊 challenge 綁定用途、正規化識別資料及完整註冊內容摘要；最終註冊請求不可替換 `displayName`、`role`、`password` 或 `identifier`。
+- 電郵使用相同介面，以識別資料格式判斷 SMS／EMAIL。
+- 發送間隔、有效期、最大嘗試次數及帳號／IP 限流由服務端配置。
+- 驗證碼不得出現在 API 回應、日誌或瀏覽器持久化儲存。
 
-### 3.3 註冊
+### 3.3 完成註冊
+
+```http
+POST /api/v1/auth/register
+```
 
 ```json
 {
-  "verificationId": "ver_01J...",
-  "verificationCode": "123456",
-  "displayName": "陳老師",
-  "role": "teacher",
-  "password": "使用者輸入的密碼"
+  "challengeId": "vc_01...",
+  "verificationCode": "123456"
 }
 ```
 
-`role` 只接受 `teacher`、`student`；顯示名稱 trim 後 2–30 字元；密碼為 8–64 個 Unicode 字元並按共同測試向量達到 `zxcvbn` 至少 3 分。識別資料已被有效帳號使用時返回 `409 IDENTIFIER_EXISTS`，但驗證碼發送端點不得成為帳號列舉途徑。
+成功：
 
-### 3.4 登入及目前使用者
+- 驗證碼、challenge 用途、完整註冊內容綁定及識別資料唯一性全部通過後建立帳號。
+- 自動建立工作階段。
+- 回應 `201` 及目前使用者資料。
+- 重複提交同一註冊操作返回原結果；不得建立第二個有效帳號。
+
+### 3.4 登入／登出／目前使用者
+
+```http
+POST /api/v1/auth/login
+POST /api/v1/auth/logout
+GET  /api/v1/me
+```
 
 登入請求：
 
 ```json
 {
-  "identifier": "user@example.com",
-  "password": "使用者輸入的密碼"
+  "identifier": "+85291234567",
+  "password": "使用者密碼"
 }
 ```
 
-登入及 `/auth/me` 的使用者資料：
+目前使用者：
 
 ```json
 {
-  "user": {
-    "id": "usr_01J...",
-    "displayName": "陳老師",
-    "role": "teacher"
-  },
-  "csrfToken": "csrf_...",
-  "sessionExpiresAt": "2026-11-24T08:00:00Z"
+  "id": "usr_01...",
+  "displayName": "陳老師",
+  "role": "TEACHER"
 }
 ```
 
-## 4. 課程
+## 4. 課程 API
 
-### 4.1 端點
+### 4.1 建立課程（老師）
 
-| 方法 | 路徑 | 用途 | 權限 |
-|---|---|---|---|
-| POST | `/courses` | 建立課程並產生固定 8 位課程碼 | 老師 |
-| GET | `/courses` | 查看本人教授或已加入課程 | 老師／學生 |
-| GET | `/courses/{courseId}` | 查看課程基本資料及本人上下文 | 負責老師／已加入學生 |
-| POST | `/courses/join` | 使用課程碼加入課程 | 學生 |
-
-### 4.2 建立課程
-
-請求：
+```http
+POST /api/v1/courses
+```
 
 ```json
 {
-  "name": "中國語文"
+  "name": "中四數學"
 }
 ```
 
-回應 `201`：
+- `name` trim 後 1–50 字元。
+- 由 Session 決定負責老師。
+- 產生固定 8 位課程碼，排除 `0/O/1/I`。
+- 同名課程允許，以課程 ID 及課程碼區分。
 
-```json
-{
-  "id": "crs_01J...",
-  "name": "中國語文",
-  "code": "ABCD2345",
-  "teacher": {
-    "id": "usr_01J...",
-    "displayName": "陳老師"
-  },
-  "createdAt": "2026-11-17T08:00:00Z"
-}
+### 4.2 老師本人課程列表
+
+```http
+GET /api/v1/courses?page=1&pageSize=20
 ```
 
-名稱 trim 後 1–50 字元，允許同名；課程碼只含排除 `0/O/1/I` 的大寫字母及數字，資料庫保證全域唯一。
-
-### 4.3 課程列表與詳情
-
-`GET /courses?scope=teaching&page=1&pageSize=20`：
-
-- 老師使用 `scope=teaching`，按建立時間由新至舊。
-- 學生使用 `scope=learning`，按加入時間由新至舊。
-- 角色與 scope 不符時返回 `403 FORBIDDEN`，不接受以查詢參數提升權限。
-
-老師項目包含 `id`、`name`、`code`、`createdAt`、`coursewareCount`；學生項目包含 `id`、`name`、`teacher`、`joinedAt`，不返回完整成員名單或原始 PPT 下載權限。
-
-### 4.4 加入課程
+只回傳目前老師負責課程，按建立時間由新至舊：
 
 ```json
 {
-  "courseCode": "ABCD2345"
-}
-```
-
-首次加入返回 `201`，重複加入返回 `200` 及原成員資料：
-
-```json
-{
-  "course": {
-    "id": "crs_01J...",
-    "name": "中國語文",
-    "teacher": {
-      "displayName": "陳老師"
-    }
-  },
-  "joinedAt": "2026-11-17T08:10:00Z",
-  "alreadyJoined": false
-}
-```
-
-課程碼自動 trim 及轉大寫，只接受 8 位合法字元；無效碼返回 `422 COURSE_CODE_INVALID`，不可加入返回 `409 COURSE_NOT_JOINABLE`，頻繁無效嘗試返回 `429 RATE_LIMITED`。
-
-## 5. PPT 上傳、轉換與預覽
-
-### 5.1 端點
-
-| 方法 | 路徑 | 用途 | 權限 |
-|---|---|---|---|
-| POST | `/courses/{courseId}/coursewares/uploads` | 建立單檔上傳工作及私有儲存 URL | 負責老師 |
-| POST | `/courses/{courseId}/coursewares/uploads/{uploadId}/complete` | 完成上傳、校驗原檔並建立待轉換課件 | 負責老師 |
-| GET | `/courses/{courseId}/coursewares` | 課件列表及處理狀態 | 負責老師／已加入學生 |
-| GET | `/coursewares/{coursewareId}` | 課件詳情、轉換狀態及可用頁面 | 負責老師／已加入學生 |
-| POST | `/coursewares/{coursewareId}/conversion-attempts` | 失敗或逾時後在同一課件版本重新轉換 | 負責老師 |
-
-### 5.2 建立上傳工作
-
-請求：
-
-```json
-{
-  "fileName": "第一課.pptx",
-  "sizeBytes": 52428800,
-  "contentType": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-}
-```
-
-回應 `201`：
-
-```json
-{
-  "uploadId": "upl_01J...",
-  "method": "PUT",
-  "uploadUrl": "https://private-storage.example/authorized-upload",
-  "requiredHeaders": {
-    "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-  },
-  "expiresAt": "2026-11-17T08:20:00Z"
-}
-```
-
-只接受 `.ppt`／`.pptx` 及對應 MIME；上限為 `104857600` bytes。每次只建立一個上傳工作，不支援多檔、拖曳 API、雲端匯入或斷點續傳。上傳 URL 只能寫入指定暫存位置，不能成為公開讀取網址。
-
-### 5.3 完成上傳
-
-請求可為空 JSON `{}`。服務端重新計算位元組大小、檢查實際檔案結構、解析 1–100 頁、將原檔轉入香港私有正式儲存，再建立課件版本及待轉換工作。
-
-回應 `202`：
-
-```json
-{
-  "id": "cw_01J...",
-  "courseId": "crs_01J...",
-  "version": 1,
-  "originalFileName": "第一課.pptx",
-  "sizeBytes": 52428800,
-  "pageCount": 24,
-  "status": "pending",
-  "uploadedAt": "2026-11-17T08:12:00Z",
-  "conversionDueAt": "2026-11-17T08:17:00Z"
-}
-```
-
-損毀、偽造副檔名、加密、需密碼或頁數不合法時返回 `422`；無效或不完整內容不得進入正式課件列表。
-
-### 5.4 狀態與頁面資源
-
-狀態列舉：`pending`、`converting`、`succeeded`、`succeeded_with_warnings`、`failed`、`timed_out`。
-
-列表按上傳時間由新至舊，返回原始檔名、大小、實際頁數、上傳時間及狀態。列表及詳情由前端每 3 秒查詢；返回頁面立即查詢，查詢失敗保留最後已知狀態。
-
-成功詳情可包含：
-
-```json
-{
-  "id": "cw_01J...",
-  "status": "succeeded",
-  "pageCount": 24,
-  "warnings": [],
-  "pages": [
+  "items": [
     {
-      "pageNumber": 1,
-      "imageUrl": "https://private-storage.example/signed-page-url",
-      "thumbnailUrl": "https://private-storage.example/signed-thumbnail-url",
-      "expiresAt": "2026-11-17T08:30:00Z"
+      "id": "crs_01...",
+      "name": "中四數學",
+      "code": "ABCD2345",
+      "createdAt": "2026-11-17T08:00:00Z"
     }
-  ]
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "total": 1
 }
 ```
 
-只有轉換成功或成功但有相容性警告才返回頁面 URL；失敗、待轉換或逾時課件不得泄露儲存位置。學生只可在已加入課程中預覽可用課件；老師的完整狀態、失敗歷史及重試權限不開放給學生。
+### 4.3 學生本人課程列表
 
-### 5.5 重新轉換
+```http
+GET /api/v1/me/course-memberships?page=1&pageSize=20
+```
 
-請求可為空 JSON `{}`。只有 `failed` 或 `timed_out` 可建立新嘗試；回應 `202` 並返回新的 `attemptId` 及目前課件。進行中重複請求返回 `200` 原工作；其他狀態返回 `409 CONVERSION_NOT_RETRYABLE`。舊嘗試回調不得覆蓋最新狀態。
+按加入時間由新至舊，回傳課程名稱、負責老師及加入時間。
 
-## 6. PPT 個人文字標註
+### 4.4 學生透過課程碼加入課程（可選 P0）
 
-### 6.1 端點
-
-| 方法 | 路徑 | 用途 | 權限 |
-|---|---|---|---|
-| GET | `/coursewares/{coursewareId}/pages/{pageNumber}/annotations` | 查看本人在指定頁的個人標註 | 已加入課程的學生 |
-| POST | `/coursewares/{coursewareId}/pages/{pageNumber}/annotations` | 建立個人文字標註 | 已加入課程的學生 |
-| PATCH | `/annotations/{annotationId}` | 修改本人標註文字 | 標註作者 |
-| DELETE | `/annotations/{annotationId}` | 刪除本人標註 | 標註作者 |
-
-老師、其他學生及訪客不可讀取學生個人標註；未加入課程的學生不可存取課件頁面或建立標註。對不可見資源統一返回 `404`，避免泄露他人標註是否存在。
-
-### 6.2 建立標註
+```http
+POST /api/v1/course-memberships/join
+```
 
 ```json
 {
-  "clientAnnotationId": "01JCLIENT...",
-  "content": "這裡是重點",
-  "position": {
-    "x": 0.35,
-    "y": 0.62
+  "code": "ABCD2345"
+}
+```
+
+- 課程碼 trim、轉大寫，只接受 8 位合法字元。
+- 學生身份由 Session 判定。
+- 重複加入返回原成員記錄，不新增記錄。
+- 無效碼、不可加入、帳號／IP 限流有對應錯誤。
+- REQ-003 完整加入流程在 6 天 MVP 暫緩；本端點保留完整產品契約，待後續實作。
+
+成功回應：
+
+```json
+{
+  "membership": {
+    "id": "mem_01...",
+    "joinedAt": "2026-11-17T08:30:00Z"
+  },
+  "course": {
+    "id": "crs_01...",
+    "name": "中四數學",
+    "code": "ABCD2345",
+    "teacherName": "陳老師"
   }
 }
 ```
 
-規則：
+### 4.5 課程詳情
 
-- `content` 不可只含空白，最多 100 個 Unicode 字元。
-- `x`、`y` 必須是有限數值且介於 `0` 與 `1`；相對課件頁面寬高，不使用螢幕像素。
-- `clientAnnotationId` 在同一學生、課件版本及頁面內唯一，用於雙擊及重試去重。
-- 頁碼必須在課件實際頁數內，課件必須已有可用頁面資源。
+```http
+GET /api/v1/courses/{courseId}
+```
 
-回應 `201`：
+老師限本人課程；學生限本人已加入課程。學生回應不含完整成員名單或原始 PPT 下載權。
+
+## 5. 課件上傳與轉換 API
+
+### 5.1 建立上傳工作
+
+```http
+POST /api/v1/courses/{courseId}/coursewares/uploads
+```
 
 ```json
 {
-  "id": "ann_01J...",
-  "coursewareId": "cw_01J...",
-  "coursewareVersion": 1,
-  "pageNumber": 1,
-  "content": "這裡是重點",
-  "position": {
-    "x": 0.35,
-    "y": 0.62
-  },
-  "version": 1,
-  "createdAt": "2026-11-17T08:25:00Z",
-  "updatedAt": "2026-11-17T08:25:00Z"
+  "fileName": "chapter-1.pptx",
+  "sizeBytes": 10485760,
+  "contentType": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 }
 ```
 
-### 6.3 修改與刪除
+- 只接受 `.ppt`／`.pptx`，`sizeBytes` 不得超過 104,857,600。
+- 老師必須負責該課程。
+- 回應 `uploadId`、單次預簽 `PUT` URL、必要 headers 及過期時間。
+- 不使用公開原檔 URL。
+
+```json
+{
+  "uploadId": "upl_01...",
+  "method": "PUT",
+  "url": "https://private-storage.example/...",
+  "headers": {
+    "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  },
+  "expiresAt": "2026-11-17T08:10:00Z"
+}
+```
+
+### 5.2 完成上傳並建立課件
+
+```http
+POST /api/v1/courses/{courseId}/coursewares/{uploadId}/upload/complete
+```
+
+服務端重新校驗：
+
+1. 上傳身份、課程歸屬及 uploadId。
+2. 實際檔案大小、副檔名及可識別格式。
+3. 原檔是否完整保存於香港私有儲存。
+4. 檔案未損毀、未加密、無需密碼且可解析。
+5. 實際頁數為 1–100 頁。
+
+全部成功後才建立課件及首個待轉換工作；否則清理或隔離暫存內容，不建立可用課件。
+
+```json
+{
+  "courseware": {
+    "id": "cw_01...",
+    "courseId": "crs_01...",
+    "fileName": "chapter-1.pptx",
+    "sizeBytes": 10485760,
+    "pageCount": 24,
+    "status": "QUEUED",
+    "latestAttempt": 1,
+    "uploadedAt": "2026-11-17T08:05:00Z"
+  }
+}
+```
+
+### 5.3 課件列表
+
+```http
+GET /api/v1/courses/{courseId}/coursewares
+```
+
+- 老師只見本人負責課程。
+- 已加入課程學生可查看本人已加入課程的成功課件列表，用於課程頁預覽及本人標註；不得查看未加入課程或其他課程資料。
+- 按上傳時間由新至舊。
+
+老師列表項目：
+
+```json
+{
+  "id": "cw_01...",
+  "fileName": "chapter-1.pptx",
+  "status": "CONVERTING",
+  "pageCount": 24,
+  "latestAttempt": 1,
+  "updatedAt": "2026-11-17T08:06:00Z"
+}
+```
+
+學生列表項目（僅在已批准入口中）：只含 `id`、`fileName`、`status`、`pageCount`、`updatedAt`，不含失敗歷史、內部嘗試、`conversionDueAt` 或其他內部排程資料。
+
+### 5.4 課件轉換狀態與預覽
+
+```http
+GET /api/v1/courses/{courseId}/coursewares/{coursewareId}
+```
+
+- 老師完整預覽限本人負責課程。
+- 學生端可在本人已加入課程的課程頁完整預覽轉換成功課件；此為已批准非課堂例外。
+- 老師可查看待轉換、轉換中、成功、成功但有相容性警告、失敗及轉換逾時。
+
+老師成功回應：
+
+```json
+{
+  "id": "cw_01...",
+  "courseId": "crs_01...",
+  "fileName": "chapter-1.pptx",
+  "pageCount": 24,
+  "status": "READY_WITH_WARNINGS",
+  "latestAttempt": 1,
+  "conversionDueAt": "2026-11-17T08:10:00Z",
+  "currentPageIndex": 0,
+  "pages": [
+    {
+      "pageIndex": 0,
+      "pageNumber": 1,
+      "imageUrl": "https://signed-resource.example/...",
+      "thumbnailUrl": "https://signed-resource.example/...",
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "pageRetry": {
+    "0": "https://signed-resource.example/retry-..."
+  }
+}
+```
+
+- 正式頁／縮圖使用等比 WebP，長邊最高 1920px／320px。
+- 老師失敗／逾時回應包含可理解錯誤及是否可重試，失敗歷史僅老師可見。
+- 學生回應 schema 僅含課件 ID、課程 ID、頁數、狀態、目前獲授權頁面及短期簽名資源 URL；不得含失敗歷史、內部嘗試、`conversionDueAt` 或其他非授權頁面。
+
+### 5.5 重新轉換（可選 P0）
+
+```http
+POST /api/v1/courses/{courseId}/coursewares/{coursewareId}/conversion-attempts
+```
+
+- 只有負責老師可在失敗／逾時後手動發起。
+- 同一課件版本新增轉換嘗試，不建立新上傳版本。
+- 原檔及舊失敗記錄保留；舊回調不得覆蓋新嘗試。
+- 進行中禁止重複發起，不自動反覆重試。
+- 此端點不屬已確認 6 天必做項目；未納入 MVP-S 時可延期。
+
+## 6. 個人文字標註 API
+
+> 以下標註 API 的服務端資料隔離、本人所有權及樂觀鎖屬 P0；已批准已加入課程學生在本人課程頁的成功課件使用，其他角色及未加入課程學生不可使用。
+
+### 6.1 列出本人標註
+
+```http
+GET /api/v1/courses/{courseId}/coursewares/{coursewareId}/annotations?pageIndex=0
+```
+
+- 學生只取得自己建立的個人標註。
+- 老師不能透過此介面取得學生個人標註。
+- 課件／頁面必須屬於目前有效授權上下文。
+
+### 6.2 建立個人標註
+
+```http
+POST /api/v1/courses/{courseId}/coursewares/{coursewareId}/annotations
+```
+
+```json
+{
+  "pageIndex": 0,
+  "content": "這裡要再複習",
+  "position": {
+    "x": 0.42,
+    "y": 0.31
+  }
+}
+```
+
+- `content` trim 後 1–100 字元，按 trim 後內容保存及計長。
+- `pageIndex` 必須在實際頁數範圍。
+- `x`、`y` 使用相對頁面寬高的 0–1 數值。
+- 作者由 Session 判定，不能由請求指定他人。
+
+### 6.3 修改／刪除本人標註
+
+```http
+PATCH  /api/v1/courses/{courseId}/coursewares/{coursewareId}/annotations/{annotationId}
+DELETE /api/v1/courses/{courseId}/coursewares/{coursewareId}/annotations/{annotationId}
+```
 
 修改請求：
 
 ```json
 {
-  "content": "更新後的重點",
-  "expectedVersion": 1
+  "content": "更新後內容",
+  "position": {
+    "x": 0.5,
+    "y": 0.4
+  },
+  "expectedVersion": 3
 }
 ```
 
-成功返回更新後標註並將 `version` 加 1；版本不符返回 `409 ANNOTATION_VERSION_CONFLICT`。刪除成功返回 `204`；重複刪除返回 `404 ANNOTATION_NOT_FOUND`，不得恢復或返回其他學生資料。
+- `content` 與 `position` 均為可選，但至少提供一項；可只改文字、只改位置或同時修改。
+- 修改文字時 trim 後重新執行 1–100 字元校驗；位置繼續使用 0–1 歸一化座標。
+- 只有作者本人可修改或刪除。
+- `expectedVersion` 不符回應 `409 ANNOTATION_VERSION_CONFLICT`，客戶端取得最新本人標註後再操作。
+- 成功修改後遞增版本並回傳更新後的 `content`、`position`、`version` 及 `updatedAt`。
 
-## 7. 最小資料實體與約束
+## 7. 最小資料實體
 
-| 實體 | 關鍵欄位／唯一性 |
+| 實體 | 必要欄位／約束 |
 |---|---|
-| User | `id`、顯示名稱、角色、已驗證手機／電郵；手機及電郵分別唯一 |
-| Session | 工作階段、使用者、CSRF、無活動及最長到期時間 |
-| Course | 名稱、負責老師、8 位唯一課程碼、建立時間 |
-| CourseMembership | 課程、學生、加入時間；`(courseId, studentId)` 唯一 |
-| CoursewareUpload | 上傳 ID、課程、暫存位置、狀態、到期時間、冪等鍵 |
-| Courseware | 課程、版本、原檔位置、檔名、位元組大小、頁數、上傳時間 |
-| ConversionAttempt | 課件版本、嘗試序號、狀態、警告、開始／完成時間；舊回調以嘗試身份拒絕覆蓋 |
-| CoursewarePage | 課件版本、頁碼、私有頁面及縮圖位置；`(coursewareId, version, pageNumber)` 唯一 |
-| Annotation | 作者、課件版本、頁碼、文字、歸一化座標、版本及時間；個人標註查詢必帶作者條件 |
+| User | id、正規化識別資料、顯示名稱、角色、密碼雜湊、狀態 |
+| VerificationChallenge | id、用途、正規化識別資料、註冊內容摘要、驗證碼雜湊、過期時間、嘗試次數、使用狀態 |
+| Session | id、userId、建立時間、最後活動時間、絕對到期時間、撤銷狀態 |
+| Course | id、teacherId、name、code、建立時間 |
+| CourseMembership | id、courseId、studentId、joinedAt；courseId + studentId 唯一 |
+| Courseware | id、courseId、原檔位置、檔名、位元組大小、實際頁數、版本、狀態、上傳時間 |
+| ConversionAttempt | id、coursewareId、attemptNo、狀態、開始／完成時間、錯誤、課件版本 |
+| CoursewarePage | id、coursewareId、pageIndex、正式頁位置、縮圖位置、寬高、版本 |
+| Annotation | id、coursewareId、pageIndex、studentId、文字、position、version、建立／更新／刪除狀態 |
 
-## 8. P0 端到端 API 流程
+所有列表及直接資源存取都須由服務端套用角色與歸屬條件，不只依靠前端隱藏入口。
 
-1. 老師發送註冊驗證碼、註冊並登入；建立課程並取得課程碼。
-2. 老師建立上傳工作、向私有儲存 PUT 原檔、呼叫 complete；其後每 3 秒查詢課件狀態。
-3. 學生註冊並登入，以課程碼加入課程，查看本人課程及可用課件。
-4. 學生開啟課件第一頁，讀取本人標註，建立、修改及刪除文字標註。
-5. 任一寫入失敗可安全重試；重新整理後以服務端工作階段及資料恢復，不由前端假造成功狀態。
+## 8. P0 端到端流程
 
-## 9. 待確認邊界
+1. 老師／學生註冊：提交完整註冊資料並發送驗證碼 → 以同一 challenge 完成註冊 → 自動登入。
+2. 老師建立課程 → 在本人課程列表看到課程。
+3. MVP 使用預建老師、學生帳號及課程成員關係；REQ-003 完整課程碼加入流程暫緩但保留契約。
+4. 老師建立上傳工作 → 以預簽 URL 上傳原檔 → 完成上傳 → 建立待轉換課件。
+5. 老師查詢狀態 → 成功後預覽正式頁及縮圖；失敗時顯示原因，重新轉換是否開放取決於 MVP-S 範圍。
+6. 學生從本人已加入課程頁開啟成功課件，逐頁預覽並建立、查看、修改及刪除本人文字標註；不得查看他人標註。
+7. 重新整理後只能看到本人標註，不能看到其他學生個人標註。
 
-1. 「標簽功能」是否確定為 PPT 個人文字標註；若是課程分類標籤，須另設 `/courses/{courseId}/tags` 等資源。
-2. 為讓 P0 在不實作即時課堂的情況下完成學生標註演示，本設計暫允許 **已加入課程學生**讀取該課程成功課件的頁面並管理本人標註；這是 MVP 範圍調整，須確認後同步 `docs/permissions.md`。若不允許，REQ-006～REQ-009 的最小課堂路徑必須升為 P0。
-3. 本版暫採私有儲存單次預簽 PUT 上傳，不支援分片續傳；若目標網絡或代理限制不適合直傳，須改為 FastAPI 接收 multipart 並重新估算。
+## 9. 已確認範圍決策與剩餘技術邊界
 
-## 10. 下一步實作順序
+1. 「標籤功能」已確認為 PPT 個人文字標註；課程分類標籤不在本期範圍。
+2. 已正式批准已加入課程學生在本人課程頁預覽成功課件並管理本人標註，不要求即時課堂；共享標註、回覆、匯出及即時同步不在 MVP。
+3. 暫按私有儲存單次預簽 `PUT`；不支援分片續傳。若網絡／代理不適合瀏覽器直傳，可改為 FastAPI multipart 上傳，但需重估傳輸與逾時處理。
 
-1. FastAPI 建立 `/api/v1` routers、統一錯誤 envelope、request ID、Cookie session 與 CSRF dependency。
-2. 建立 Pydantic request／response schemas 及 OpenAPI 分組：`auth`、`courses`、`coursewares`、`annotations`。
-3. 先完成 auth 與 courses，再接私有儲存上傳／轉換，最後完成個人標註 CRUD。
-4. 以本文件產生可判定的 API 契約測試；不在原型確認前提前建立 `docs/test-cases.md`。
+## 10. 建議實施順序
+
+1. FastAPI app、設定、資料庫、Session／CSRF、統一錯誤格式。
+2. Pydantic schemas、OpenAPI、認證與角色依賴。
+3. 使用者、驗證碼 challenge、註冊、登入及登出。
+4. REQ-003 完整加入流程在 6 天 MVP 暫緩；MVP 演示使用預建老師、學生帳號及課程成員關係，端點契約仍保留，待後續實作。
+5. 私有儲存、上傳工作、完成上傳及課件資料。
+6. Celery 轉換、狀態查詢及靜態預覽。
+7. 直接實作個人標註 CRUD、版本控制及本人資料隔離。
+8. 最後以 MVP-S 端到端情境驗證權限、錯誤及安全重試。

@@ -20,3 +20,6 @@ __pycache__/
 
 # Temporary contract artifacts
 *.tsbuildinfo
+
+# Backend local runtime data (SQLite DB, storage, outbox)
+apps/api/var/

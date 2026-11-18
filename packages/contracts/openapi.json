@@ -25,10 +25,1704 @@
           }
         }
       }
+    },
+    "/api/v1/auth/csrf": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Csrf Token",
+        "description": "登入前後均可取得 CSRF token；匿名以 double-submit cookie 綁定。",
+        "operationId": "get_csrf_token_api_v1_auth_csrf_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsrfResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register/verification-codes": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start Registration",
+        "operationId": "start_registration_api_v1_auth_register_verification_codes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Complete Registration",
+        "operationId": "complete_registration_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterCompleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Me",
+        "operationId": "get_me_api_v1_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses": {
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Create Course",
+        "operationId": "create_course_api_v1_courses_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "List Courses",
+        "operationId": "list_courses_api_v1_courses_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/course-memberships": {
+      "get": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "List Memberships",
+        "operationId": "list_memberships_api_v1_me_course_memberships_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/course-memberships/join": {
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Join Course",
+        "description": "以課程碼加入課程；重複加入回傳原成員記錄（冪等）。",
+        "operationId": "join_course_api_v1_course_memberships_join_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinCourseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}": {
+      "get": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Get Course",
+        "operationId": "get_course_api_v1_courses__course_id__get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/coursewares/uploads": {
+      "post": {
+        "tags": [
+          "coursewares"
+        ],
+        "summary": "Create Upload",
+        "operationId": "create_upload_api_v1_courses__course_id__coursewares_uploads_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/{upload_id}/content": {
+      "put": {
+        "tags": [
+          "coursewares"
+        ],
+        "summary": "Receive Upload Content",
+        "description": "本機開發適配：以 API 自身端點取代真實預簽 URL，接收原始檔案位元組。",
+        "operationId": "receive_upload_content_api_v1_uploads__upload_id__content_put",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Receive Upload Content Api V1 Uploads  Upload Id  Content Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/coursewares/{upload_id}/upload/complete": {
+      "post": {
+        "tags": [
+          "coursewares"
+        ],
+        "summary": "Complete Upload",
+        "operationId": "complete_upload_api_v1_courses__course_id__coursewares__upload_id__upload_complete_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadCompleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoursewareDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/coursewares": {
+      "get": {
+        "tags": [
+          "coursewares"
+        ],
+        "summary": "List Coursewares",
+        "operationId": "list_coursewares_api_v1_courses__course_id__coursewares_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoursewareListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}": {
+      "get": {
+        "tags": [
+          "coursewares"
+        ],
+        "summary": "Get Courseware",
+        "operationId": "get_courseware_api_v1_courses__course_id__coursewares__courseware_id__get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "courseware_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Courseware Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoursewareDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}/pages": {
+      "get": {
+        "tags": [
+          "coursewares"
+        ],
+        "summary": "Get Courseware Pages",
+        "operationId": "get_courseware_pages_api_v1_courses__course_id__coursewares__courseware_id__pages_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "courseware_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Courseware Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoursewarePagesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}/conversion-attempts": {
+      "post": {
+        "tags": [
+          "coursewares"
+        ],
+        "summary": "Retry Conversion",
+        "operationId": "retry_conversion_api_v1_courses__course_id__coursewares__courseware_id__conversion_attempts_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "courseware_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Courseware Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/media/{object_key}": {
+      "get": {
+        "tags": [
+          "coursewares"
+        ],
+        "summary": "Serve Media",
+        "description": "授權後提供轉換頁面圖；老師限本人課程，學生限已加入課程。",
+        "operationId": "serve_media_api_v1_media__object_key__get",
+        "parameters": [
+          {
+            "name": "object_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}/annotations": {
+      "get": {
+        "tags": [
+          "annotations"
+        ],
+        "summary": "List Annotations",
+        "operationId": "list_annotations_api_v1_courses__course_id__coursewares__courseware_id__annotations_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "courseware_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Courseware Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "page_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "annotations"
+        ],
+        "summary": "Create Annotation",
+        "operationId": "create_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "courseware_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Courseware Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}/annotations/{annotation_id}": {
+      "patch": {
+        "tags": [
+          "annotations"
+        ],
+        "summary": "Update Annotation",
+        "operationId": "update_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations__annotation_id__patch",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "courseware_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Courseware Id"
+            }
+          },
+          {
+            "name": "annotation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Annotation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationPatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "annotations"
+        ],
+        "summary": "Delete Annotation",
+        "operationId": "delete_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations__annotation_id__delete",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "courseware_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Courseware Id"
+            }
+          },
+          {
+            "name": "annotation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Annotation Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AnnotationCreateRequest": {
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pageindex"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Content"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pageIndex",
+          "content",
+          "position"
+        ],
+        "title": "AnnotationCreateRequest"
+      },
+      "AnnotationItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "pageIndex": {
+            "type": "integer",
+            "title": "Pageindex"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          },
+          "coursewareVersion": {
+            "type": "integer",
+            "title": "Coursewareversion"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "pageIndex",
+          "content",
+          "position",
+          "coursewareVersion",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "AnnotationItem"
+      },
+      "AnnotationListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnnotationItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pageSize": {
+            "type": "integer",
+            "title": "Pagesize"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "title": "AnnotationListResponse"
+      },
+      "AnnotationPatchRequest": {
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expectedversion"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Position"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "AnnotationPatchRequest"
+      },
+      "AnnotationResponse": {
+        "properties": {
+          "annotation": {
+            "$ref": "#/components/schemas/AnnotationItem"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "annotation"
+        ],
+        "title": "AnnotationResponse"
+      },
+      "AuthUserResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserPublic"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "title": "AuthUserResponse"
+      },
+      "CourseCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CourseCreateRequest"
+      },
+      "CourseCreated": {
+        "properties": {
+          "course": {
+            "$ref": "#/components/schemas/CourseSummary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "course"
+        ],
+        "title": "CourseCreated"
+      },
+      "CourseDetailCourse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "teacherName": {
+            "type": "string",
+            "title": "Teachername"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "teacherName",
+          "createdAt"
+        ],
+        "title": "CourseDetailCourse"
+      },
+      "CourseDetailResponse": {
+        "properties": {
+          "course": {
+            "$ref": "#/components/schemas/CourseDetailCourse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "course"
+        ],
+        "title": "CourseDetailResponse"
+      },
+      "CourseListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CourseSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pageSize": {
+            "type": "integer",
+            "title": "Pagesize"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "title": "CourseListResponse"
+      },
+      "CourseSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "code",
+          "createdAt"
+        ],
+        "title": "CourseSummary"
+      },
+      "CoursewareDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "pageCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagecount"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warning"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "conversionDueAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversiondueat"
+          },
+          "canRetry": {
+            "type": "boolean",
+            "title": "Canretry"
+          },
+          "canPreview": {
+            "type": "boolean",
+            "title": "Canpreview"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoursewareFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "fileName",
+          "pageCount",
+          "version",
+          "status",
+          "updatedAt",
+          "canRetry",
+          "canPreview"
+        ],
+        "title": "CoursewareDetail"
+      },
+      "CoursewareDetailResponse": {
+        "properties": {
+          "courseware": {
+            "$ref": "#/components/schemas/CoursewareDetail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "courseware"
+        ],
+        "title": "CoursewareDetailResponse"
+      },
+      "CoursewareFailure": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CoursewareFailure"
+      },
+      "CoursewareListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CoursewareSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pageSize": {
+            "type": "integer",
+            "title": "Pagesize"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "title": "CoursewareListResponse"
+      },
+      "CoursewarePagesResponse": {
+        "properties": {
+          "coursewareId": {
+            "type": "string",
+            "title": "Coursewareid"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewPage"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "coursewareId",
+          "version",
+          "pages"
+        ],
+        "title": "CoursewarePagesResponse"
+      },
+      "CoursewareSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "pageCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagecount"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warning"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "fileName",
+          "pageCount",
+          "version",
+          "status",
+          "updatedAt"
+        ],
+        "title": "CoursewareSummary"
+      },
+      "CsrfResponse": {
+        "properties": {
+          "csrfToken": {
+            "type": "string",
+            "title": "Csrftoken"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "csrfToken"
+        ],
+        "title": "CsrfResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -54,6 +1748,418 @@
           "version"
         ],
         "title": "HealthResponse"
+      },
+      "JoinCourseRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "JoinCourseRequest"
+      },
+      "LoginRequest": {
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "title": "Identifier"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identifier",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "MembershipListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MembershipSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pageSize": {
+            "type": "integer",
+            "title": "Pagesize"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "title": "MembershipListResponse"
+      },
+      "MembershipSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "joinedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joinedat"
+          },
+          "course": {
+            "$ref": "#/components/schemas/CourseSummary"
+          },
+          "teacherName": {
+            "type": "string",
+            "title": "Teachername"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "joinedAt",
+          "course",
+          "teacherName"
+        ],
+        "title": "MembershipSummary"
+      },
+      "Position": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Y"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "Position"
+      },
+      "PreviewPage": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "full": {
+            "type": "string",
+            "title": "Full"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "full",
+          "thumb",
+          "width",
+          "height",
+          "version"
+        ],
+        "title": "PreviewPage"
+      },
+      "RegisterCompleteRequest": {
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "title": "Challengeid"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "challengeId",
+          "code"
+        ],
+        "title": "RegisterCompleteRequest"
+      },
+      "RegisterStartRequest": {
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "identifier": {
+            "type": "string",
+            "title": "Identifier"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "displayName",
+          "role",
+          "identifier",
+          "password"
+        ],
+        "title": "RegisterStartRequest"
+      },
+      "RegisterStartResponse": {
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "title": "Challengeid"
+          },
+          "delivery": {
+            "type": "string",
+            "title": "Delivery"
+          },
+          "identifierHint": {
+            "type": "string",
+            "title": "Identifierhint"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "title": "Expiresin"
+          },
+          "resendAfter": {
+            "type": "integer",
+            "title": "Resendafter"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "challengeId",
+          "delivery",
+          "identifierHint",
+          "expiresIn",
+          "resendAfter"
+        ],
+        "title": "RegisterStartResponse"
+      },
+      "RetryResponse": {
+        "properties": {
+          "coursewareId": {
+            "type": "string",
+            "title": "Coursewareid"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "attemptNo": {
+            "type": "integer",
+            "title": "Attemptno"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "coursewareId",
+          "status",
+          "attemptNo"
+        ],
+        "title": "RetryResponse"
+      },
+      "UploadCompleteRequest": {
+        "properties": {
+          "sha256": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Sha256"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sha256"
+        ],
+        "title": "UploadCompleteRequest"
+      },
+      "UploadCreateRequest": {
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Filename"
+          },
+          "byteSize": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Bytesize"
+          },
+          "contentType": {
+            "type": "string",
+            "title": "Contenttype"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fileName",
+          "byteSize",
+          "contentType"
+        ],
+        "title": "UploadCreateRequest"
+      },
+      "UploadCreateResponse": {
+        "properties": {
+          "uploadId": {
+            "type": "string",
+            "title": "Uploadid"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "title": "Uploadurl"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Headers"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expiresat"
+          },
+          "maxBytes": {
+            "type": "integer",
+            "title": "Maxbytes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "uploadId",
+          "uploadUrl",
+          "method",
+          "headers",
+          "expiresAt",
+          "maxBytes"
+        ],
+        "title": "UploadCreateResponse"
+      },
+      "UserPublic": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "displayName",
+          "role"
+        ],
+        "title": "UserPublic"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   }

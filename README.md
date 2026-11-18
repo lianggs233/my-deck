@@ -1,6 +1,18 @@
 # My Deck
 
-Web PPT 互動教學系統。目前完成前後端專案初始化、公開健康檢查，以及由 FastAPI OpenAPI 生成前端 TypeScript 型別的契約流程；登入、課程、課件及標註功能尚未開始實作。
+Web PPT 互動教學系統。目前完成前後端專案初始化；後端 MVP P0 API 已完成（註冊／登入／課程／課件上傳轉換／個人標註，見下方「後端 MVP 快速開始」）；前端已依 Penpot 切片建立登入／註冊、老師與學生課程、課件預覽及個人標註頁面骨架，業務資料暫由 mock adapter 提供，待與後端對接。
+
+## 後端 MVP 快速開始
+
+```bash
+cd apps/api
+cp .env.example .env
+uv sync
+uv run python scripts/seed_demo.py    # 建表＋演示帳號與課程成員
+uv run uvicorn app.main:app --reload
+```
+
+演示帳號：`teacher@mydeck.dev`／`student@mydeck.dev`，密碼 `MyDeck#2026`。註冊驗證碼會寫入 `var/outbox/` 的 JSON 檔（MVP 本機開發以檔案取代真實 SMS／Email）。課件轉換目前使用 Pillow demo 轉換器（輸出文字摘要預覽圖，正式渲染待 LibreOffice 整合）；`.ppt` 舊格式在未安裝 LibreOffice 時會回報明確失敗原因。
 
 ## 專案結構
 
@@ -44,7 +56,7 @@ corepack pnpm install --frozen-lockfile
 corepack pnpm dev
 ```
 
-開啟 `http://127.0.0.1:5173`。初始化頁會透過 Vite `/api` proxy 呼叫後端健康檢查，並顯示連線中、成功或失敗狀態。後端未啟動時，頁面會顯示可重試的錯誤提示。
+開啟 `http://127.0.0.1:5173`。MVP 前端路由包括 `/login`、`/register`、`/teacher`、`/student`、`/status`；業務 API 未對接前使用 `apps/web/src/api/mvp.ts` 的 mock adapter。後端未啟動時，`/status` 仍會顯示可重試的錯誤提示。
 
 ## 更新 API 契約與前端型別
 

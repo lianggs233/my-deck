@@ -21,10 +21,568 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/csrf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Csrf Token
+         * @description 登入前後均可取得 CSRF token；匿名以 double-submit cookie 綁定。
+         */
+        get: operations["get_csrf_token_api_v1_auth_csrf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register/verification-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Registration */
+        post: operations["start_registration_api_v1_auth_register_verification_codes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Registration */
+        post: operations["complete_registration_api_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login */
+        post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Me */
+        get: operations["get_me_api_v1_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Courses */
+        get: operations["list_courses_api_v1_courses_get"];
+        put?: never;
+        /** Create Course */
+        post: operations["create_course_api_v1_courses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/course-memberships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Memberships */
+        get: operations["list_memberships_api_v1_me_course_memberships_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/course-memberships/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join Course
+         * @description 以課程碼加入課程；重複加入回傳原成員記錄（冪等）。
+         */
+        post: operations["join_course_api_v1_course_memberships_join_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Course */
+        get: operations["get_course_api_v1_courses__course_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/coursewares/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Upload */
+        post: operations["create_upload_api_v1_courses__course_id__coursewares_uploads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uploads/{upload_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Receive Upload Content
+         * @description 本機開發適配：以 API 自身端點取代真實預簽 URL，接收原始檔案位元組。
+         */
+        put: operations["receive_upload_content_api_v1_uploads__upload_id__content_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/coursewares/{upload_id}/upload/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Upload */
+        post: operations["complete_upload_api_v1_courses__course_id__coursewares__upload_id__upload_complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/coursewares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Coursewares */
+        get: operations["list_coursewares_api_v1_courses__course_id__coursewares_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Courseware */
+        get: operations["get_courseware_api_v1_courses__course_id__coursewares__courseware_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Courseware Pages */
+        get: operations["get_courseware_pages_api_v1_courses__course_id__coursewares__courseware_id__pages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}/conversion-attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Conversion */
+        post: operations["retry_conversion_api_v1_courses__course_id__coursewares__courseware_id__conversion_attempts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/media/{object_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Serve Media
+         * @description 授權後提供轉換頁面圖；老師限本人課程，學生限已加入課程。
+         */
+        get: operations["serve_media_api_v1_media__object_key__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}/annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Annotations */
+        get: operations["list_annotations_api_v1_courses__course_id__coursewares__courseware_id__annotations_get"];
+        put?: never;
+        /** Create Annotation */
+        post: operations["create_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/coursewares/{courseware_id}/annotations/{annotation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Annotation */
+        delete: operations["delete_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations__annotation_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Annotation */
+        patch: operations["update_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations__annotation_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnnotationCreateRequest */
+        AnnotationCreateRequest: {
+            /** Pageindex */
+            pageIndex: number;
+            /** Content */
+            content: string;
+            position: components["schemas"]["Position"];
+        };
+        /** AnnotationItem */
+        AnnotationItem: {
+            /** Id */
+            id: string;
+            /** Pageindex */
+            pageIndex: number;
+            /** Content */
+            content: string;
+            position: components["schemas"]["Position"];
+            /** Coursewareversion */
+            coursewareVersion: number;
+            /** Version */
+            version: number;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
+        /** AnnotationListResponse */
+        AnnotationListResponse: {
+            /** Items */
+            items: components["schemas"]["AnnotationItem"][];
+            /** Page */
+            page: number;
+            /** Pagesize */
+            pageSize: number;
+            /** Total */
+            total: number;
+        };
+        /** AnnotationPatchRequest */
+        AnnotationPatchRequest: {
+            /** Expectedversion */
+            expectedVersion: number;
+            /** Content */
+            content?: string | null;
+            position?: components["schemas"]["Position"] | null;
+        };
+        /** AnnotationResponse */
+        AnnotationResponse: {
+            annotation: components["schemas"]["AnnotationItem"];
+        };
+        /** AuthUserResponse */
+        AuthUserResponse: {
+            user: components["schemas"]["UserPublic"];
+        };
+        /** CourseCreateRequest */
+        CourseCreateRequest: {
+            /** Name */
+            name: string;
+        };
+        /** CourseCreated */
+        CourseCreated: {
+            course: components["schemas"]["CourseSummary"];
+        };
+        /** CourseDetailCourse */
+        CourseDetailCourse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Code */
+            code?: string | null;
+            /** Teachername */
+            teacherName: string;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+        };
+        /** CourseDetailResponse */
+        CourseDetailResponse: {
+            course: components["schemas"]["CourseDetailCourse"];
+        };
+        /** CourseListResponse */
+        CourseListResponse: {
+            /** Items */
+            items: components["schemas"]["CourseSummary"][];
+            /** Page */
+            page: number;
+            /** Pagesize */
+            pageSize: number;
+            /** Total */
+            total: number;
+        };
+        /** CourseSummary */
+        CourseSummary: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Code */
+            code: string;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+        };
+        /** CoursewareDetail */
+        CoursewareDetail: {
+            /** Id */
+            id: string;
+            /** Filename */
+            fileName: string;
+            /** Pagecount */
+            pageCount: number | null;
+            /** Version */
+            version: number;
+            /** Status */
+            status: string;
+            /** Warning */
+            warning?: string | null;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+            /** Conversiondueat */
+            conversionDueAt?: string | null;
+            /** Canretry */
+            canRetry: boolean;
+            /** Canpreview */
+            canPreview: boolean;
+            failure?: components["schemas"]["CoursewareFailure"] | null;
+        };
+        /** CoursewareDetailResponse */
+        CoursewareDetailResponse: {
+            courseware: components["schemas"]["CoursewareDetail"];
+        };
+        /** CoursewareFailure */
+        CoursewareFailure: {
+            /** Code */
+            code?: string | null;
+            /** Message */
+            message?: string | null;
+            /** Detail */
+            detail?: string | null;
+        };
+        /** CoursewareListResponse */
+        CoursewareListResponse: {
+            /** Items */
+            items: components["schemas"]["CoursewareSummary"][];
+            /** Page */
+            page: number;
+            /** Pagesize */
+            pageSize: number;
+            /** Total */
+            total: number;
+        };
+        /** CoursewarePagesResponse */
+        CoursewarePagesResponse: {
+            /** Coursewareid */
+            coursewareId: string;
+            /** Version */
+            version: number;
+            /** Pages */
+            pages: components["schemas"]["PreviewPage"][];
+        };
+        /** CoursewareSummary */
+        CoursewareSummary: {
+            /** Id */
+            id: string;
+            /** Filename */
+            fileName: string;
+            /** Pagecount */
+            pageCount: number | null;
+            /** Version */
+            version: number;
+            /** Status */
+            status: string;
+            /** Warning */
+            warning?: string | null;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
+        /** CsrfResponse */
+        CsrfResponse: {
+            /** Csrftoken */
+            csrfToken: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** HealthResponse */
         HealthResponse: {
             /**
@@ -39,6 +597,160 @@ export interface components {
             service: "my-deck-api";
             /** Version */
             version: string;
+        };
+        /** JoinCourseRequest */
+        JoinCourseRequest: {
+            /** Code */
+            code: string;
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /** Identifier */
+            identifier: string;
+            /** Password */
+            password: string;
+        };
+        /** MembershipListResponse */
+        MembershipListResponse: {
+            /** Items */
+            items: components["schemas"]["MembershipSummary"][];
+            /** Page */
+            page: number;
+            /** Pagesize */
+            pageSize: number;
+            /** Total */
+            total: number;
+        };
+        /** MembershipSummary */
+        MembershipSummary: {
+            /** Id */
+            id: string;
+            /**
+             * Joinedat
+             * Format: date-time
+             */
+            joinedAt: string;
+            course: components["schemas"]["CourseSummary"];
+            /** Teachername */
+            teacherName: string;
+        };
+        /** Position */
+        Position: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** PreviewPage */
+        PreviewPage: {
+            /** Index */
+            index: number;
+            /** Full */
+            full: string;
+            /** Thumb */
+            thumb: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Version */
+            version: number;
+        };
+        /** RegisterCompleteRequest */
+        RegisterCompleteRequest: {
+            /** Challengeid */
+            challengeId: string;
+            /** Code */
+            code: string;
+        };
+        /** RegisterStartRequest */
+        RegisterStartRequest: {
+            /** Displayname */
+            displayName: string;
+            /** Role */
+            role: string;
+            /** Identifier */
+            identifier: string;
+            /** Password */
+            password: string;
+        };
+        /** RegisterStartResponse */
+        RegisterStartResponse: {
+            /** Challengeid */
+            challengeId: string;
+            /** Delivery */
+            delivery: string;
+            /** Identifierhint */
+            identifierHint: string;
+            /** Expiresin */
+            expiresIn: number;
+            /** Resendafter */
+            resendAfter: number;
+        };
+        /** RetryResponse */
+        RetryResponse: {
+            /** Coursewareid */
+            coursewareId: string;
+            /** Status */
+            status: string;
+            /** Attemptno */
+            attemptNo: number;
+        };
+        /** UploadCompleteRequest */
+        UploadCompleteRequest: {
+            /** Sha256 */
+            sha256: string;
+        };
+        /** UploadCreateRequest */
+        UploadCreateRequest: {
+            /** Filename */
+            fileName: string;
+            /** Bytesize */
+            byteSize: number;
+            /** Contenttype */
+            contentType: string;
+        };
+        /** UploadCreateResponse */
+        UploadCreateResponse: {
+            /** Uploadid */
+            uploadId: string;
+            /** Uploadurl */
+            uploadUrl: string;
+            /** Method */
+            method: string;
+            /** Headers */
+            headers: {
+                [key: string]: string;
+            };
+            /**
+             * Expiresat
+             * Format: date-time
+             */
+            expiresAt: string;
+            /** Maxbytes */
+            maxBytes: number;
+        };
+        /** UserPublic */
+        UserPublic: {
+            /** Id */
+            id: string;
+            /** Displayname */
+            displayName: string;
+            /** Role */
+            role: string;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;
@@ -65,6 +777,729 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    get_csrf_token_api_v1_auth_csrf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CsrfResponse"];
+                };
+            };
+        };
+    };
+    start_registration_api_v1_auth_register_verification_codes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisterStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_registration_api_v1_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthUserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_v1_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthUserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_me_api_v1_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthUserResponse"];
+                };
+            };
+        };
+    };
+    list_courses_api_v1_courses_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_course_api_v1_courses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CourseCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_memberships_api_v1_me_course_memberships_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_course_api_v1_course_memberships_join_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JoinCourseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_course_api_v1_courses__course_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_upload_api_v1_courses__course_id__coursewares_uploads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadCreateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receive_upload_content_api_v1_uploads__upload_id__content_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_upload_api_v1_courses__course_id__coursewares__upload_id__upload_complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoursewareDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_coursewares_api_v1_courses__course_id__coursewares_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoursewareListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_courseware_api_v1_courses__course_id__coursewares__courseware_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+                courseware_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoursewareDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_courseware_pages_api_v1_courses__course_id__coursewares__courseware_id__pages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+                courseware_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoursewarePagesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_conversion_api_v1_courses__course_id__coursewares__courseware_id__conversion_attempts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+                courseware_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    serve_media_api_v1_media__object_key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                object_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_annotations_api_v1_courses__course_id__coursewares__courseware_id__annotations_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                page_index?: number | null;
+            };
+            header?: never;
+            path: {
+                course_id: string;
+                courseware_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+                courseware_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotationCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations__annotation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+                courseware_id: string;
+                annotation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations__annotation_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+                courseware_id: string;
+                annotation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotationPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

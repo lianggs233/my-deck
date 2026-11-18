@@ -1,0 +1,198 @@
+from __future__ import annotations
+
+from datetime import datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db.base import Base, utcnow
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    identifier: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    identifier_type: Mapped[str] = mapped_column(String(10))
+    display_name: Mapped[str] = mapped_column(String(50))
+    role: Mapped[str] = mapped_column(String(10))  # TEACHER / STUDENT
+    password_hash: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Session(Base):
+    __tablename__ = "sessions"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    csrf_token_hash: Mapped[str] = mapped_column(String(64))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    absolute_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class VerificationChallenge(Base):
+    __tablename__ = "verification_challenges"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    purpose: Mapped[str] = mapped_column(String(20))  # REGISTER
+    identifier: Mapped[str] = mapped_column(String(255), index=True)
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    payload_json: Mapped[str] = mapped_column(Text, default="{}")
+    code_hash: Mapped[str] = mapped_column(String(64))
+    channel: Mapped[str] = mapped_column(String(10))  # SMS / EMAIL
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class LoginAttempt(Base):
+    __tablename__ = "login_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    identifier: Mapped[str] = mapped_column(String(255), index=True)
+    ip: Mapped[str] = mapped_column(String(64), index=True)
+    success: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Course(Base):
+    __tablename__ = "courses"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    name: Mapped[str] = mapped_column(String(50))
+    code: Mapped[str] = mapped_column(String(8), unique=True, index=True)
+    teacher_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class CourseMembership(Base):
+    __tablename__ = "course_memberships"
+    __table_args__ = (
+        UniqueConstraint("course_id", "student_id", name="uq_membership_course_student"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Upload(Base):
+    __tablename__ = "uploads"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
+    file_name: Mapped[str] = mapped_column(String(255))
+    byte_size: Mapped[int] = mapped_column(BigInteger)
+    content_type: Mapped[str] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(20), default="CREATED")  # CREATED / RECEIVED
+    object_key: Mapped[str] = mapped_column(String(255))
+    sha256_expected: Mapped[str | None] = mapped_column(String(64), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Courseware(Base):
+    __tablename__ = "coursewares"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
+    upload_id: Mapped[str | None] = mapped_column(ForeignKey("uploads.id"), default=None)
+    file_name: Mapped[str] = mapped_column(String(255))
+    byte_size: Mapped[int] = mapped_column(BigInteger)
+    page_count: Mapped[int | None] = mapped_column(Integer, default=None)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(30), default="QUEUED")
+    original_object_key: Mapped[str] = mapped_column(String(255))
+    failure_code: Mapped[str | None] = mapped_column(String(50), default=None)
+    failure_message: Mapped[str | None] = mapped_column(String(255), default=None)
+    failure_detail: Mapped[str | None] = mapped_column(Text, default=None)
+    warning: Mapped[str | None] = mapped_column(String(255), default=None)
+    conversion_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
+
+
+class CoursewarePage(Base):
+    __tablename__ = "courseware_pages"
+    __table_args__ = (
+        UniqueConstraint("courseware_id", "page_index", name="uq_page_courseware_index"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    courseware_id: Mapped[str] = mapped_column(ForeignKey("coursewares.id"), index=True)
+    page_index: Mapped[int] = mapped_column(Integer)
+    width: Mapped[int] = mapped_column(Integer)
+    height: Mapped[int] = mapped_column(Integer)
+    full_key: Mapped[str] = mapped_column(String(255))
+    thumb_key: Mapped[str] = mapped_column(String(255))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class ConversionAttempt(Base):
+    __tablename__ = "conversion_attempts"
+    __table_args__ = (
+        UniqueConstraint("courseware_id", "attempt_no", name="uq_attempt_courseware_no"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    courseware_id: Mapped[str] = mapped_column(ForeignKey("coursewares.id"), index=True)
+    attempt_no: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20))  # RUNNING / SUCCEEDED / FAILED
+    error_code: Mapped[str | None] = mapped_column(String(50), default=None)
+    error_message: Mapped[str | None] = mapped_column(String(255), default=None)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class Annotation(Base):
+    __tablename__ = "annotations"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    courseware_id: Mapped[str] = mapped_column(ForeignKey("coursewares.id"), index=True)
+    courseware_version: Mapped[int] = mapped_column(Integer, default=1)
+    page_index: Mapped[int] = mapped_column(Integer)
+    student_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    content: Mapped[str] = mapped_column(String(100))
+    x: Mapped[float] = mapped_column(Float)
+    y: Mapped[float] = mapped_column(Float)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
+
+
+class IdempotencyRecord(Base):
+    __tablename__ = "idempotency_records"
+    __table_args__ = (
+        UniqueConstraint("key", "user_id", "method", "path", name="uq_idem_key_user_route"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    key: Mapped[str] = mapped_column(String(80), index=True)
+    user_id: Mapped[str | None] = mapped_column(String(40), default=None)
+    method: Mapped[str] = mapped_column(String(10))
+    path: Mapped[str] = mapped_column(String(255))
+    request_hash: Mapped[str] = mapped_column(String(64))
+    response_status: Mapped[int | None] = mapped_column(Integer, default=None)
+    response_body: Mapped[str | None] = mapped_column(Text, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

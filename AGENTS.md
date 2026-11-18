@@ -6,7 +6,14 @@
 
 ## 仓库现状
 
-- 当前仓库仅包含文档和 `skills/skill.md`，尚无应用代码、依赖清单、构建配置以及测试、Lint、类型检查命令。不得臆测安装或验证命令；新增代码后应重新检查仓库并更新本文件。
+- 前端位于 `apps/web`，使用 React、Mantine、TypeScript、Vite 与 pnpm；后端位于 `apps/api`，使用 Python 3.12、FastAPI、uv、Ruff 与 mypy。
+- OpenAPI JSON 位于 `packages/contracts/openapi.json`，前端生成类型位于 `apps/web/src/api/schema.d.ts`；两者都是生成产物，不得手动修改。
+- 前端安装与启动：在 `apps/web` 执行 `corepack pnpm install --frozen-lockfile`、`corepack pnpm dev`。
+- 后端安装与启动：在 `apps/api` 执行 `uv sync`、`uv run uvicorn app.main:app --reload`。
+- 修改 API 后，在 `apps/api` 执行 `uv run python scripts/export_openapi.py`，再在 `apps/web` 执行 `corepack pnpm generate:api`。
+- 前端验证：`corepack pnpm lint`、`corepack pnpm lint:style`、`corepack pnpm typecheck`、`corepack pnpm format:check`、`corepack pnpm build`。
+- 后端验证：`uv run ruff format --check .`、`uv run ruff check .`、`uv run mypy app scripts`。
+- 当前只完成项目初始化、健康检查与 OpenAPI 类型生成，尚无业务功能或测试用例；新增结构、依赖或命令后应重新检查并更新本文件及 README。
 
 ## 需求、原型与测试
 

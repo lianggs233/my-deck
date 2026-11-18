@@ -1,0 +1,22 @@
+# Dependencies and build outputs
+node_modules/
+dist/
+coverage/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+
+# Local environment and editors
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
+
+# Temporary contract artifacts
+*.tsbuildinfo

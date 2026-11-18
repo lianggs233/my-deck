@@ -89,7 +89,7 @@ export function RegisterPage() {
       title={'建立你的\n課堂身份'}
       subtitle={'選擇老師或學生角色，\n完成驗證即可開始互動。'}
     >
-      <Stack gap="xl">
+      <Stack gap="lg">
         <div>
           <Title order={2} fz={32} c="#17324D">
             建立帳號
@@ -106,7 +106,7 @@ export function RegisterPage() {
         ) : null}
 
         <form onSubmit={(event) => void submit(event)}>
-          <Stack gap="lg">
+          <Stack gap="md">
             <Box component="fieldset" p={0} style={{ border: 0 }}>
               <Text component="legend" fz={16} fw={600} c="#17324D" mb={8}>
                 你的角色
@@ -123,7 +123,7 @@ export function RegisterPage() {
                     >
                       <Paper
                         radius="lg"
-                        p="md"
+                        p="sm"
                         style={{
                           border: selected ? '2px solid #12836F' : '1px solid #D8E2E8',
                           background: selected ? '#DDF4EC' : '#FFFFFF',

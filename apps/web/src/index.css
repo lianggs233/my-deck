@@ -62,6 +62,13 @@ a:hover {
   padding-inline: 1rem;
 }
 
+/* 短螢幕（高度 < 864px）隱藏認證頁左欄裝飾預覽卡，避免頁面溢出出現滾動條 */
+@media (height <= 54rem) {
+  .md-auth-preview {
+    display: none;
+  }
+}
+
 /* kicker：左側黃色直條 + 黃字標籤（認證頁左欄） */
 .md-kicker {
   display: inline-flex;

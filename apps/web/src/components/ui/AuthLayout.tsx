@@ -24,13 +24,14 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
         bg="#17324D"
         mih="100vh"
         w="clamp(400px, 42vw, 600px)"
-        p={48}
+        px={48}
+        py="clamp(16px, 4vh, 48px)"
         style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}
         visibleFrom="md"
       >
         <BrandMark />
 
-        <Box mt={64}>
+        <Box mt="clamp(20px, 5vh, 64px)">
           <Text className="md-kicker" component="p" m={0}>
             帳號與安全
           </Text>
@@ -43,7 +44,15 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
         </Box>
 
         {/* Classroom preview 裝飾卡（切片圖形：白 slide + 黃色標註 + Mint 同步徽章） */}
-        <Paper bg="#24445F" radius={24} p={32} mt={64} maw={400} w="100%">
+        <Paper
+          className="md-auth-preview"
+          bg="#24445F"
+          radius={24}
+          p={32}
+          mt="clamp(20px, 5vh, 64px)"
+          maw={400}
+          w="100%"
+        >
           <Paper bg="#FFFFFF" radius={16} p={24} style={{ position: 'relative' }}>
             <Stack gap={12}>
               <Box h={16} w={128} bg="#12836F" style={{ borderRadius: 8 }} />
@@ -87,7 +96,7 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
           </Box>
         </Paper>
 
-        <Box mt="auto" pt={64}>
+        <Box mt="auto" pt="clamp(16px, 4vh, 64px)">
           <Text fz={20} fw={500} c="#FFFFFF">
             一個帳號，連結每一次課堂互動。
           </Text>
@@ -102,10 +111,16 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
         flex={1}
         bg="#F5F8F6"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}
-        py="xl"
         px="md"
       >
-        <Paper bg="#FFFFFF" radius="xl" w={640} p={64} maw="100%">
+        <Paper
+          bg="#FFFFFF"
+          radius="xl"
+          w={640}
+          px="clamp(24px, 5vw, 64px)"
+          py="clamp(20px, 3.5vh, 64px)"
+          maw="100%"
+        >
           <Box maw={512} mx="auto">
             {children}
           </Box>

@@ -4,7 +4,6 @@ import {
   Button,
   Group,
   Paper,
-  Select,
   Stack,
   Text,
   TextInput,
@@ -34,23 +33,17 @@ const channelTabs: { value: Channel; label: string }[] = [
   { value: 'EMAIL', label: '電子郵件' },
 ]
 
-/** 預留後續可選不同地區；現版本不可編輯 */
-const regionOptions = [{ value: '+852', label: '+852' }]
+/** 固定地區碼 +852；預留後續改為可選不同地區的選擇框（屆時換回 Select 元件） */
+export const REGION_CODE = '+852'
 
 export function RegionCodeSelect() {
   return (
-    <Select
-      data={regionOptions}
-      defaultValue="+852"
-      disabled
-      variant="unstyled"
-      w={88}
-      rightSection={<IconChevronDown size={16} color="#5D7184" aria-hidden />}
-      styles={{
-        input: { fontSize: 16, fontWeight: 600, color: '#5D7184', cursor: 'not-allowed' },
-      }}
-      aria-label="地區號碼"
-    />
+    <Group gap={4} wrap="nowrap" pl={14} component="span" aria-label="地區號碼">
+      <Text component="span" fz={16} fw={600} c="#5D7184">
+        {REGION_CODE}
+      </Text>
+      <IconChevronDown size={16} color="#5D7184" aria-hidden />
+    </Group>
   )
 }
 
@@ -71,7 +64,18 @@ export function RegisterPage() {
     setSubmitting(true)
     setError('')
     try {
-      await register({ identifier, displayName, role, password })
+      let submitIdentifier = identifier
+      if (channel === 'PHONE') {
+        // 校驗僅針對本地號碼（不含「+」），容忍貼上時的空格／破折號／已含 852 前綴
+        const digits = identifier.replace(/\D/g, '')
+        const local = digits.startsWith('852') && digits.length === 11 ? digits.slice(3) : digits
+        if (!/^\d{8}$/.test(local)) {
+          setError('請輸入 8 位數手機號碼。')
+          return
+        }
+        submitIdentifier = `${REGION_CODE}${local}`
+      }
+      await register({ identifier: submitIdentifier, displayName, role, password })
       navigate('/login', { state: { registered: true } })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '註冊失敗')
@@ -209,8 +213,9 @@ export function RegisterPage() {
                 value={identifier}
                 onChange={(event) => setIdentifier(event.currentTarget.value)}
                 leftSection={<RegionCodeSelect />}
-                leftSectionWidth={104}
-                styles={{ input: { paddingLeft: 112 } }}
+                leftSectionWidth={78}
+                styles={{ input: { paddingLeft: 86 } }}
+                inputMode="numeric"
                 required
               />
             ) : (

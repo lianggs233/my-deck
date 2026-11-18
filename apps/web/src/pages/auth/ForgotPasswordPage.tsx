@@ -30,21 +30,17 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <AuthLayout
-      kicker="找回帳號"
-      title="重設密碼，繼續學習。"
-      subtitle="我們會發送驗證碼到你的手機號碼或電郵，確認身份後即可設定新密碼。"
-    >
+    <AuthLayout title={'安全找回\n你的帳號'} subtitle={'完成擁有者驗證後，\n即可設定新的密碼。'}>
       <Stack gap="xl">
         <div>
           <IconBox tone="yellow" size={64} c="#17324D">
             <IconKey size={30} stroke={1.8} aria-hidden />
           </IconBox>
-          <Title order={2} c="#17324D" mt="md">
+          <Title order={2} fz={32} c="#17324D" mt="md">
             忘記密碼？
           </Title>
-          <Text fz={16} c="#5D7184" mt={4}>
-            輸入註冊時使用的手機號碼或電郵，我們會發送驗證碼。
+          <Text fz={16} c="#5D7184" mt={4} style={{ whiteSpace: 'pre-line' }}>
+            {'輸入註冊時使用的手機號碼或電郵，\n我們會發送驗證碼。'}
           </Text>
         </div>
 
@@ -58,7 +54,7 @@ export function ForgotPasswordPage() {
           <Stack gap="lg">
             <TextInput
               label="手機號碼或電郵"
-              placeholder="name@example.com"
+              placeholder="+852 9123 4567"
               value={identifier}
               onChange={(event) => setIdentifier(event.currentTarget.value)}
               required
@@ -66,7 +62,7 @@ export function ForgotPasswordPage() {
             <Button type="submit" loading={submitting} fullWidth>
               發送驗證碼
             </Button>
-            <Anchor component={Link} to="/login" fz={16} fw={600} c="#0B6455" ta="center">
+            <Anchor component={Link} to="/login" ta="center" fz={16} fw={700} c="#0B6455">
               返回登入
             </Anchor>
           </Stack>

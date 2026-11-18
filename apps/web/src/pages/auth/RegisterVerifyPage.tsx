@@ -1,4 +1,4 @@
-import { Anchor, Button, Group, Stack, Text, Title } from '@mantine/core'
+import { Anchor, Button, Stack, Text, Title } from '@mantine/core'
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 
@@ -29,8 +29,7 @@ export function RegisterVerifyPage() {
 
   if (!state?.request || !state?.challenge) return <Navigate to="/register" replace />
 
-  const { request, challenge } = state
-  const deliveryText = challenge.delivery === 'EMAIL' ? '電郵' : '手機短訊'
+  const { request } = state
 
   async function verifyAndLogin() {
     setSubmitting(true)
@@ -59,18 +58,17 @@ export function RegisterVerifyPage() {
 
   return (
     <AuthLayout
-      kicker="安全驗證"
-      title="驗證你的帳號。"
-      subtitle="輸入驗證碼以完成註冊，開始你的課堂旅程。"
+      title={'確認這個帳號\n屬於你'}
+      subtitle={'輸入收到的 6 位驗證碼，\n完成後會自動登入。'}
     >
       <Stack gap="xl">
         <div>
           <StatusPill tone="yellow">步驟 2 / 2</StatusPill>
-          <Title order={2} c="#17324D" mt="md">
+          <Title order={2} fz={32} c="#17324D" mt="md">
             輸入驗證碼
           </Title>
-          <Text fz={16} c="#5D7184" mt={4}>
-            6 位驗證碼已發送至你的{deliveryText}
+          <Text fz={16} c="#5D7184" mt={4} style={{ whiteSpace: 'pre-line' }}>
+            {`驗證碼已發送至\n${request.identifier}`}
           </Text>
         </div>
 
@@ -80,28 +78,26 @@ export function RegisterVerifyPage() {
           </Text>
         ) : null}
 
-        <Stack gap="lg" align="flex-start">
+        <Stack gap="lg">
           <VerificationCodeInput value={code} onChange={setCode} />
-          <Text fz={16} c="#5D7184">
+          <Text ta="center" fz={16} c="#5D7184">
             驗證碼有效期及重發次數受安全限制
           </Text>
           <Button fullWidth loading={submitting} onClick={() => void verifyAndLogin()}>
             驗證並登入
           </Button>
-          <Group justify="space-between" w="100%" fz={16}>
+          <Text ta="center" fz={16} c="#5D7184">
             {secondsLeft > 0 ? (
-              <Text fz={16} c="#5D7184">
-                {secondsLeft} 秒後可重新發送
-              </Text>
+              `${secondsLeft} 秒後可重新發送`
             ) : (
               <Anchor fz={16} fw={600} c="#0B6455" onClick={() => void resend()}>
                 重新發送驗證碼
               </Anchor>
             )}
-            <Anchor component={Link} to="/register" fz={16} fw={600} c="#0B6455">
-              更改手機號碼
-            </Anchor>
-          </Group>
+          </Text>
+          <Anchor component={Link} to="/register" ta="center" fz={16} fw={700} c="#0B6455">
+            更改手機號碼
+          </Anchor>
         </Stack>
       </Stack>
     </AuthLayout>

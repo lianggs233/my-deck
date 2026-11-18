@@ -1,21 +1,10 @@
-import {
-  Anchor,
-  Button,
-  Divider,
-  Group,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core'
+import { Anchor, Button, Group, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../auth/useAuth'
 import { AuthLayout } from '../../components/ui/AuthLayout'
 import { StatusPill } from '../../components/ui/StatusPill'
-import type { UserRole } from '../../types/domain'
 import { homePath } from '../../utils/home-path'
 
 /** PG-001 登入 */
@@ -43,36 +32,19 @@ export function LoginPage() {
     }
   }
 
-  async function loginAs(role: UserRole) {
-    setSubmitting(true)
-    setError('')
-    try {
-      const session = await login(
-        role === 'TEACHER' ? 'teacher@demo.local' : 'student@demo.local',
-        'demo-password',
-      )
-      navigate(homePath(session.user.role), { replace: true })
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '登入失敗')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   return (
     <AuthLayout
-      kicker="歡迎回來"
-      title="繼續你的課堂旅程。"
-      subtitle="登入 my-deck，管理課程、預覽課件，並延續每一次互動。"
+      title={'回到你的\n互動課堂'}
+      subtitle={'登入後繼續備課、同步學習，\n保留每一份課堂筆記。'}
     >
       <Stack gap="xl">
         <div>
           <StatusPill tone="mint">歡迎回來</StatusPill>
-          <Title order={2} c="#17324D" mt="md">
-            登入
+          <Title order={2} fz={32} c="#17324D" mt="md">
+            登入 my-deck
           </Title>
           <Text fz={16} c="#5D7184" mt={4}>
-            使用手機號碼或電郵登入
+            使用已驗證的手機號碼或電郵。
           </Text>
         </div>
 
@@ -86,61 +58,40 @@ export function LoginPage() {
           <Stack gap="lg">
             <TextInput
               label="手機號碼或電郵"
-              placeholder="teacher@demo.local"
+              placeholder="+852 9123 4567"
               value={identifier}
               onChange={(event) => setIdentifier(event.currentTarget.value)}
               required
             />
-            <PasswordInput
-              label="密碼"
-              placeholder="輸入密碼"
-              value={password}
-              onChange={(event) => setPassword(event.currentTarget.value)}
-              required
-            />
-            <Group justify="space-between" fz={16}>
-              <Anchor component={Link} to="/register" fz={16} fw={600} c="#0B6455">
-                立即註冊
-              </Anchor>
-              <Anchor component={Link} to="/forgot-password" fz={16} fw={600} c="#0B6455">
-                忘記密碼？
-              </Anchor>
-            </Group>
+            <div>
+              <PasswordInput
+                label="密碼"
+                placeholder="輸入密碼"
+                value={password}
+                onChange={(event) => setPassword(event.currentTarget.value)}
+                required
+              />
+              <Group justify="flex-end" mt="xs">
+                <Anchor component={Link} to="/forgot-password" fz={16} fw={600} c="#0B6455">
+                  忘記密碼？
+                </Anchor>
+              </Group>
+            </div>
             <Button type="submit" loading={submitting} fullWidth>
               登入
             </Button>
           </Stack>
         </form>
 
-        <Divider color="#DCE6EA" />
-
-        <Stack gap="sm">
-          <Text fz={16} c="#5D7184" ta="center">
-            MVP 開發模式：使用演示帳號快速登入
-          </Text>
-          <Group grow>
-            <Button
-              variant="default"
-              styles={{
-                root: { background: '#FFFFFF', border: '1px solid #D8E2E8', color: '#0B6455' },
-              }}
-              onClick={() => void loginAs('TEACHER')}
-              disabled={submitting}
-            >
-              老師演示
-            </Button>
-            <Button
-              variant="default"
-              styles={{
-                root: { background: '#FFFFFF', border: '1px solid #D8E2E8', color: '#0B6455' },
-              }}
-              onClick={() => void loginAs('STUDENT')}
-              disabled={submitting}
-            >
-              學生演示
-            </Button>
-          </Group>
-        </Stack>
+        <Text ta="center" fz={16} c="#5D7184">
+          還沒有帳號？{' '}
+          <Anchor component={Link} to="/register" fz={16} fw={700} c="#0B6455">
+            立即註冊
+          </Anchor>
+        </Text>
+        <Text ta="center" fz={16} c="#5D7184">
+          受保護的課堂空間 · 香港地區服務
+        </Text>
       </Stack>
     </AuthLayout>
   )

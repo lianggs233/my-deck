@@ -1,4 +1,4 @@
-import { Anchor, Button, Group, Stack, Text, Title } from '@mantine/core'
+import { Anchor, Button, Stack, Text, Title } from '@mantine/core'
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 
@@ -57,18 +57,17 @@ export function ResetVerifyPage() {
 
   return (
     <AuthLayout
-      kicker="安全驗證"
-      title="確認你的身份。"
-      subtitle="輸入我們剛發送的 6 位驗證碼，即可設定新密碼。"
+      title={'驗證身份，\n保護課堂資料'}
+      subtitle={'此步驟用於確認帳號擁有者，\n不會泄露帳號註冊狀態。'}
     >
       <Stack gap="xl">
         <div>
           <StatusPill tone="yellow">安全驗證</StatusPill>
-          <Title order={2} c="#17324D" mt="md">
+          <Title order={2} fz={32} c="#17324D" mt="md">
             輸入驗證碼
           </Title>
-          <Text fz={16} c="#5D7184" mt={4}>
-            驗證碼已發送至 {identifier}
+          <Text fz={16} c="#5D7184" mt={4} style={{ whiteSpace: 'pre-line' }}>
+            {'如帳號符合重設條件，驗證碼將發送至\n已綁定的手機號碼或電郵。'}
           </Text>
         </div>
 
@@ -78,28 +77,26 @@ export function ResetVerifyPage() {
           </Text>
         ) : null}
 
-        <Stack gap="lg" align="flex-start">
+        <Stack gap="lg">
           <VerificationCodeInput value={code} onChange={setCode} />
-          <Text fz={16} c="#5D7184">
+          <Text ta="center" fz={16} c="#5D7184">
             請勿與任何人分享驗證碼
           </Text>
           <Button fullWidth loading={submitting} onClick={() => void verify()}>
             驗證並繼續
           </Button>
-          <Group justify="space-between" w="100%">
+          <Text ta="center" fz={16} c="#5D7184">
             {secondsLeft > 0 ? (
-              <Text fz={16} c="#5D7184">
-                {secondsLeft} 秒後可重新發送
-              </Text>
+              `${secondsLeft} 秒後可重新發送`
             ) : (
               <Anchor fz={16} fw={600} c="#0B6455" onClick={() => void resend()}>
                 重新發送驗證碼
               </Anchor>
             )}
-            <Anchor component={Link} to="/login" fz={16} fw={600} c="#0B6455">
-              返回登入
-            </Anchor>
-          </Group>
+          </Text>
+          <Anchor component={Link} to="/login" ta="center" fz={16} fw={700} c="#0B6455">
+            返回登入
+          </Anchor>
         </Stack>
       </Stack>
     </AuthLayout>

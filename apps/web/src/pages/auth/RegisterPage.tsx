@@ -19,22 +19,27 @@ import { useAuth } from '../../auth/useAuth'
 import { AuthLayout } from '../../components/ui/AuthLayout'
 import { IconBox } from '../../components/ui/IconBox'
 import { PasswordStrengthField } from '../../components/ui/PasswordStrengthField'
-import { StatusPill } from '../../components/ui/StatusPill'
 import type { UserRole } from '../../types/domain'
 
 type Channel = 'PHONE' | 'EMAIL'
 
-/**
- * 手機號碼地區碼選擇框（放在手機號碼輸入框內左側）。
- * 現版本不可編輯，僅支援香港 +852；預留後續可選不同地區。
- */
+const roleCards: { role: UserRole; icon: typeof IconSchool; name: string; description: string }[] =
+  [
+    { role: 'TEACHER', icon: IconSchool, name: '老師', description: '建立及帶領課堂' },
+    { role: 'STUDENT', icon: IconBook2, name: '學生', description: '加入及參與課堂' },
+  ]
+
+const channelTabs: { value: Channel; label: string }[] = [
+  { value: 'PHONE', label: '手機號碼' },
+  { value: 'EMAIL', label: '電子郵件' },
+]
+
+/** 預留後續可選不同地區；現版本不可編輯 */
 const regionOptions = [{ value: '+852', label: '+852' }]
 
-/** 手機號碼輸入框內的地區選擇框（disabled） */
 export function RegionCodeSelect() {
   return (
     <Select
-      aria-label="地區碼"
       data={regionOptions}
       defaultValue="+852"
       disabled
@@ -42,36 +47,19 @@ export function RegionCodeSelect() {
       w={88}
       rightSection={<IconChevronDown size={16} color="#5D7184" aria-hidden />}
       styles={{
-        input: {
-          fontSize: 16,
-          fontWeight: 600,
-          color: '#5D7184',
-          cursor: 'not-allowed',
-        },
-        root: { height: '100%' },
-        wrapper: { height: '100%' },
+        input: { fontSize: 16, fontWeight: 600, color: '#5D7184', cursor: 'not-allowed' },
       }}
+      aria-label="地區號碼"
     />
   )
 }
 
-const roleCards: { role: UserRole; icon: typeof IconSchool; name: string; description: string }[] =
-  [
-    {
-      role: 'TEACHER',
-      icon: IconSchool,
-      name: '老師',
-      description: '建立課程、上傳課件並開始授課',
-    },
-    { role: 'STUDENT', icon: IconBook2, name: '學生', description: '加入課程、預覽課件並記下重點' },
-  ]
-
-/** PG-002 註冊（步驟 1：選角色、填資料、發送驗證碼） */
+/** PG-002 註冊（步驟 1：選角色、填資料、註冊） */
 export function RegisterPage() {
   const { requestRegistrationCode } = useAuth()
   const navigate = useNavigate()
   const [role, setRole] = useState<UserRole>('TEACHER')
-  const [channel, setChannel] = useState<Channel>('EMAIL')
+  const [channel, setChannel] = useState<Channel>('PHONE')
   const [identifier, setIdentifier] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
@@ -95,18 +83,16 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      kicker="開始使用"
-      title="建立你的 my-deck 帳號。"
-      subtitle="註冊後即可建立或加入課程，與課堂保持同步。"
+      title={'建立你的\n課堂身份'}
+      subtitle={'選擇老師或學生角色，\n完成驗證即可開始互動。'}
     >
       <Stack gap="xl">
         <div>
-          <StatusPill tone="yellow">步驟 1 / 2</StatusPill>
-          <Title order={2} c="#17324D" mt="md">
+          <Title order={2} fz={32} c="#17324D">
             建立帳號
           </Title>
           <Text fz={16} c="#5D7184" mt={4}>
-            選擇角色並填寫資料，註冊後角色不可自行更改。
+            只需幾步，即可加入你的第一個課堂。
           </Text>
         </div>
 
@@ -120,7 +106,7 @@ export function RegisterPage() {
           <Stack gap="lg">
             <Box component="fieldset" p={0} style={{ border: 0 }}>
               <Text component="legend" fz={16} fw={600} c="#17324D" mb={8}>
-                選擇你的角色
+                你的角色
               </Text>
               <Group gap="md" grow>
                 {roleCards.map((card) => {
@@ -134,7 +120,7 @@ export function RegisterPage() {
                     >
                       <Paper
                         radius="lg"
-                        p="lg"
+                        p="md"
                         style={{
                           border: selected ? '2px solid #12836F' : '1px solid #D8E2E8',
                           background: selected ? '#DDF4EC' : '#FFFFFF',
@@ -142,14 +128,14 @@ export function RegisterPage() {
                         }}
                       >
                         <Group gap="md" wrap="nowrap">
-                          <IconBox tone={selected ? 'mint' : 'gray'} size={48}>
-                            <card.icon size={24} stroke={1.8} aria-hidden />
+                          <IconBox tone={card.role === 'TEACHER' ? 'mint' : 'yellow'} size={40}>
+                            <card.icon size={22} stroke={1.8} aria-hidden />
                           </IconBox>
                           <Box>
                             <Text fz={16} fw={700} c="#17324D">
                               {card.name}
                             </Text>
-                            <Text fz={14} c="#5D7184" mt={2} lh={1.5}>
+                            <Text fz={14} c="#5D7184" mt={2}>
                               {card.description}
                             </Text>
                           </Box>
@@ -161,45 +147,61 @@ export function RegisterPage() {
               </Group>
             </Box>
 
-            <Box component="fieldset" p={0} style={{ border: 0 }}>
-              <Text component="legend" fz={16} fw={600} c="#17324D" mb={8}>
-                驗證方式
-              </Text>
-              <Group gap="md">
-                {(
-                  [
-                    { value: 'PHONE', label: '手機號碼' },
-                    { value: 'EMAIL', label: '電子郵件' },
-                  ] as const
-                ).map((item) => {
-                  const selected = channel === item.value
-                  return (
-                    <UnstyledButton
-                      key={item.value}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setChannel(item.value)}
-                    >
-                      <Box
-                        px="lg"
-                        h={40}
-                        style={{
-                          borderRadius: 16,
-                          background: selected ? '#DDF4EC' : '#FFFFFF',
-                          border: selected ? '1px solid #12836F' : '1px solid #D8E2E8',
-                          display: 'flex',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text fz={16} fw={600} c={selected ? '#0B6455' : '#5D7184'}>
-                          {item.label}
-                        </Text>
-                      </Box>
-                    </UnstyledButton>
-                  )
-                })}
+            {/* 頻道切換（分段控制） */}
+            <Group
+              gap={4}
+              p={4}
+              style={{ border: '1px solid #D8E2E8', borderRadius: 16, background: '#FFFFFF' }}
+              role="tablist"
+              aria-label="驗證方式"
+            >
+              {channelTabs.map((tab) => {
+                const selected = channel === tab.value
+                return (
+                  <UnstyledButton
+                    key={tab.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setChannel(tab.value)}
+                    style={{
+                      flex: 1,
+                      height: 48,
+                      borderRadius: 12,
+                      background: selected ? '#DDF4EC' : 'transparent',
+                    }}
+                  >
+                    <Text ta="center" fz={16} fw={600} c={selected ? '#0B6455' : '#5D7184'}>
+                      {tab.label}
+                    </Text>
+                  </UnstyledButton>
+                )
+              })}
+            </Group>
+
+            <div>
+              <Group justify="space-between" mb={8}>
+                <Text
+                  component="label"
+                  htmlFor="register-display-name"
+                  fz={16}
+                  fw={600}
+                  c="#17324D"
+                >
+                  顯示名稱
+                </Text>
+                <Text fz={14} c="#5D7184">
+                  2–30 個字元
+                </Text>
               </Group>
-            </Box>
+              <TextInput
+                id="register-display-name"
+                placeholder="陳老師"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.currentTarget.value)}
+                required
+              />
+            </div>
 
             {channel === 'PHONE' ? (
               <TextInput
@@ -207,10 +209,10 @@ export function RegisterPage() {
                 placeholder="9123 4567"
                 value={identifier}
                 onChange={(event) => setIdentifier(event.currentTarget.value)}
-                required
                 leftSection={<RegionCodeSelect />}
                 leftSectionWidth={104}
                 styles={{ input: { paddingLeft: 112 } }}
+                required
               />
             ) : (
               <TextInput
@@ -221,20 +223,18 @@ export function RegisterPage() {
                 required
               />
             )}
-            <TextInput
-              label="顯示名稱"
-              placeholder="2–30 個字元"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.currentTarget.value)}
-              required
-            />
+
             <PasswordStrengthField value={password} onChange={setPassword} />
+
             <Button type="submit" loading={submitting} fullWidth>
-              發送驗證碼
+              註冊
             </Button>
-            <Anchor component={Link} to="/login" fz={16} fw={600} c="#0B6455" ta="center">
-              返回登入
-            </Anchor>
+            <Text ta="center" fz={16} c="#5D7184">
+              已有帳號？{' '}
+              <Anchor component={Link} to="/login" fz={16} fw={700} c="#0B6455">
+                返回登入
+              </Anchor>
+            </Text>
           </Stack>
         </form>
       </Stack>

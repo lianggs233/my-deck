@@ -1,11 +1,9 @@
 import { Anchor, Button, PasswordInput, Stack, Text, Title } from '@mantine/core'
-import { IconLock } from '@tabler/icons-react'
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../auth/useAuth'
 import { AuthLayout } from '../../components/ui/AuthLayout'
-import { IconBox } from '../../components/ui/IconBox'
 import { PasswordStrengthField } from '../../components/ui/PasswordStrengthField'
 
 interface ResetState {
@@ -43,20 +41,16 @@ export function ResetPasswordPage() {
 
   return (
     <AuthLayout
-      kicker="設定新密碼"
-      title="最後一步，更新密碼。"
-      subtitle="設定完成後即可使用新密碼登入 my-deck。"
+      title={'設定新密碼，\n重新安全登入'}
+      subtitle={'重設成功後，所有舊工作階段\n都會撤銷。'}
     >
       <Stack gap="xl">
         <div>
-          <IconBox tone="yellow" size={64} c="#17324D">
-            <IconLock size={30} stroke={1.8} aria-hidden />
-          </IconBox>
-          <Title order={2} c="#17324D" mt="md">
+          <Title order={2} fz={32} c="#17324D">
             設定新密碼
           </Title>
-          <Text fz={16} c="#5D7184" mt={4}>
-            請輸入 8–64 個字元的新密碼，支援 Unicode。
+          <Text fz={16} c="#5D7184" mt={4} style={{ whiteSpace: 'pre-line' }}>
+            {'請使用未曾於其他網站使用的密碼，\n並達到安全強度要求。'}
           </Text>
         </div>
 
@@ -75,15 +69,14 @@ export function ResetPasswordPage() {
             onChange={(event) => setConfirm(event.currentTarget.value)}
           />
           <div className="md-notice md-notice-yellow">
-            <IconLock size={20} stroke={1.8} aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
-            <Text fz={16} fw={600}>
+            <Text ta="center" fz={16} fw={600} style={{ flex: 1 }}>
               完成後，所有裝置都需要重新登入。
             </Text>
           </div>
           <Button fullWidth loading={submitting} onClick={() => void submit()}>
             重設密碼並返回登入
           </Button>
-          <Anchor component={Link} to="/login" fz={16} fw={600} c="#0B6455" ta="center">
+          <Anchor component={Link} to="/login" ta="center" fz={16} fw={700} c="#0B6455">
             取消並返回登入
           </Anchor>
         </Stack>

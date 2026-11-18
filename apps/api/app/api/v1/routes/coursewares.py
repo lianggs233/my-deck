@@ -31,6 +31,7 @@ from app.db.models import (
     User,
 )
 from app.schemas.courseware import (
+    ConversionAttemptItem,
     CoursewareDetail,
     CoursewareDetailResponse,
     CoursewareFailure,
@@ -96,15 +97,19 @@ def _summary(courseware: Courseware) -> CoursewareSummary:
     return CoursewareSummary(
         id=courseware.id,
         file_name=courseware.file_name,
+        byte_size=courseware.byte_size,
         page_count=courseware.page_count,
         version=courseware.version,
         status=courseware.status,
         warning=courseware.warning,
+        created_at=courseware.created_at,
         updated_at=courseware.updated_at,
     )
 
 
-def _detail(courseware: Courseware, *, is_teacher: bool) -> CoursewareDetail:
+async def _detail(
+    db: AsyncSession, courseware: Courseware, *, is_teacher: bool
+) -> CoursewareDetail:
     settings = get_settings()
     due_at = None
     if courseware.conversion_started_at is not None:
@@ -118,13 +123,42 @@ def _detail(courseware: Courseware, *, is_teacher: bool) -> CoursewareDetail:
             message=courseware.failure_message,
             detail=courseware.failure_detail,
         )
+    attempt_rows = (
+        (
+            await db.execute(
+                select(ConversionAttempt)
+                .where(ConversionAttempt.courseware_id == courseware.id)
+                .order_by(ConversionAttempt.attempt_no.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    attempts = [
+        ConversionAttemptItem(
+            attempt_no=attempt.attempt_no,
+            status=attempt.status,
+            error_code=attempt.error_code,
+            error_message=attempt.error_message,
+            started_at=attempt.started_at,
+            finished_at=attempt.finished_at,
+        )
+        for attempt in attempt_rows
+    ]
     return CoursewareDetail(
         **_summary(courseware).model_dump(),
         conversion_due_at=due_at if is_teacher else None,
         can_retry=is_teacher and courseware.status in {"FAILED", "TIMED_OUT"},
         can_preview=courseware.status in READY_STATUSES,
         failure=failure,
+        latest_attempt=attempt_rows[-1].attempt_no if attempt_rows else 0,
+        attempts=attempts,
     )
+
+
+# 背景轉換任務的強引用集合：事件循環只弱引用 task，
+# 不保留引用可能導致任務在完成前被 GC 回收而永久停在 CONVERTING。
+_BACKGROUND_TASKS: set[asyncio.Task[None]] = set()
 
 
 def _start_conversion(courseware: Courseware, attempt: ConversionAttempt) -> None:
@@ -134,7 +168,9 @@ def _start_conversion(courseware: Courseware, attempt: ConversionAttempt) -> Non
     courseware.failure_message = None
     courseware.failure_detail = None
     courseware.warning = None
-    asyncio.create_task(run_conversion(courseware.id, attempt.attempt_no))
+    task = asyncio.create_task(run_conversion(courseware.id, attempt.attempt_no))
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
 
 
 @router.post(
@@ -288,7 +324,9 @@ async def complete_upload(
         db.add(attempt)
         await db.flush()
         _start_conversion(courseware, attempt)
-    result_body = CoursewareDetailResponse(courseware=_detail(courseware, is_teacher=True))
+    result_body = CoursewareDetailResponse(
+        courseware=await _detail(db, courseware, is_teacher=True)
+    )
     await idem.store(db, status_code=201, payload=result_body)
     await db.commit()
     return result_body
@@ -333,7 +371,7 @@ async def get_courseware(
     await _course_for_member(db, course_id, user)
     courseware = await _courseware(db, course_id, courseware_id)
     return CoursewareDetailResponse(
-        courseware=_detail(courseware, is_teacher=user.role == "TEACHER")
+        courseware=await _detail(db, courseware, is_teacher=user.role == "TEACHER")
     )
 
 

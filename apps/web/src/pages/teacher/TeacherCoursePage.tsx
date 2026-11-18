@@ -33,67 +33,54 @@ export function TeacherCoursePage() {
   const queryClient = useQueryClient()
   const [uploadOpened, setUploadOpened] = useState(false)
   const [cancelOpened, setCancelOpened] = useState(false)
-  const [file, setFile] = useState<{ name: string; size: number } | null>(null)
-  const [progress, setProgress] = useState(0)
+  const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const courseQuery = useQuery({
     queryKey: ['course', courseId, 'TEACHER'],
-    queryFn: () => courseApi.getCourse(courseId, 'TEACHER'),
+    queryFn: () => courseApi.getCourse(courseId),
     enabled: Boolean(courseId),
   })
   const coursewareQuery = useQuery({
     queryKey: ['coursewares', courseId],
     queryFn: () => coursewareApi.list(courseId),
     enabled: Boolean(courseId),
+    // 轉換為非同步背景工作：有排隊/轉換中的課件時每 3 秒輪詢
+    refetchInterval: (query) =>
+      (query.state.data?.items ?? []).some((item) => ['QUEUED', 'CONVERTING'].includes(item.status))
+        ? 3000
+        : false,
   })
-  const completeUploadMutation = useMutation({
-    mutationFn: () => {
-      if (!file) throw new Error('請先選擇檔案')
-      return coursewareApi.completeUpload(courseId, { fileName: file.name, sizeBytes: file.size })
-    },
+  const uploadMutation = useMutation({
+    mutationFn: (target: File) => coursewareApi.upload(courseId, target),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['coursewares', courseId] })
       closeUpload()
     },
+    onError: (cause) => {
+      setUploading(false)
+      setUploadError(cause instanceof Error ? cause.message : '上傳失敗，請稍後再試')
+    },
   })
 
-  function stopTimer() {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-  }
-
   function closeUpload() {
-    stopTimer()
     setUploadOpened(false)
     setFile(null)
-    setProgress(0)
     setUploading(false)
+    setUploadError('')
   }
 
   function startUpload() {
     if (!file) return
+    setUploadError('')
     setUploading(true)
-    setProgress(0)
-    stopTimer()
-    timerRef.current = setInterval(() => {
-      setProgress((value) => {
-        const next = Math.min(100, value + 10)
-        if (next >= 100) {
-          stopTimer()
-          completeUploadMutation.mutate()
-        }
-        return next
-      })
-    }, 120)
+    uploadMutation.mutate(file)
   }
 
   function requestCloseUpload() {
-    if (uploading && !completeUploadMutation.isPending) {
+    if (uploading) {
       setCancelOpened(true)
       return
     }
@@ -273,7 +260,7 @@ export function TeacherCoursePage() {
                   hidden
                   onChange={(event) => {
                     const chosen = event.currentTarget.files?.[0]
-                    if (chosen) setFile({ name: chosen.name, size: chosen.size })
+                    if (chosen) setFile(chosen)
                   }}
                 />
                 <Button
@@ -291,21 +278,24 @@ export function TeacherCoursePage() {
             </Box>
           )}
 
-          {uploading || progress > 0 ? (
+          {uploading ? (
             <Stack gap="xs">
               <Group justify="space-between" fz={16}>
                 <Text fw={600} c="#17324D">
-                  上傳進度
-                </Text>
-                <Text fw={600} c="#0B6455">
-                  {progress}%
+                  上傳中
                 </Text>
               </Group>
-              <Progress value={progress} size={12} radius="xl" color="teal" />
+              <Progress value={100} size={12} radius="xl" color="teal" animated />
               <Text fz={16} c="#5D7184">
                 上傳完成後會自動開始轉換
               </Text>
             </Stack>
+          ) : null}
+
+          {uploadError ? (
+            <Text fz={16} c="#B42318" role="alert">
+              {uploadError}
+            </Text>
           ) : null}
 
           <Group grow>
@@ -315,15 +305,11 @@ export function TeacherCoursePage() {
                 root: { background: '#FFFFFF', border: '1px solid #D8E2E8', color: '#0B6455' },
               }}
               onClick={requestCloseUpload}
-              disabled={completeUploadMutation.isPending}
+              disabled={uploadMutation.isPending}
             >
               取消上傳
             </Button>
-            <Button
-              loading={uploading || completeUploadMutation.isPending}
-              disabled={!file || uploading}
-              onClick={startUpload}
-            >
+            <Button loading={uploading} disabled={!file || uploading} onClick={startUpload}>
               開始上傳
             </Button>
           </Group>

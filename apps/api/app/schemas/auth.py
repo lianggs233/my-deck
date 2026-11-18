@@ -33,6 +33,16 @@ class RegisterCompleteRequest(ApiModel):
     code: str
 
 
+class PasswordResetStartRequest(ApiModel):
+    identifier: str
+
+
+class PasswordResetCompleteRequest(ApiModel):
+    challenge_id: str
+    code: str
+    password: str
+
+
 class LoginRequest(ApiModel):
     identifier: str
     password: str

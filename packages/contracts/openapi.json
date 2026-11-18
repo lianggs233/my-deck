@@ -130,6 +130,125 @@
         }
       }
     },
+    "/api/v1/auth/register/direct": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register Direct",
+        "description": "免驗證碼註冊（本版本註冊流程不使用驗證碼）；成功後不簽發工作階段，需另行登入。",
+        "operationId": "register_direct_api_v1_auth_register_direct_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password-reset/verification-codes": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start Password Reset",
+        "description": "發送重設密碼驗證碼；為防帳號枚舉，無論帳號是否存在皆回 201。",
+        "operationId": "start_password_reset_api_v1_auth_password_reset_verification_codes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password-reset": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Complete Password Reset",
+        "description": "以驗證碼重設密碼；成功後撤銷該帳號所有工作階段。",
+        "operationId": "complete_password_reset_api_v1_auth_password_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetCompleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -1291,6 +1410,65 @@
         ],
         "title": "AuthUserResponse"
       },
+      "ConversionAttemptItem": {
+        "properties": {
+          "attemptNo": {
+            "type": "integer",
+            "title": "Attemptno"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorcode"
+          },
+          "errorMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errormessage"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Startedat"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attemptNo",
+          "status",
+          "startedAt"
+        ],
+        "title": "ConversionAttemptItem"
+      },
       "CourseCreateRequest": {
         "properties": {
           "name": {
@@ -1345,6 +1523,10 @@
             "type": "string",
             "title": "Teachername"
           },
+          "studentCount": {
+            "type": "integer",
+            "title": "Studentcount"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -1357,6 +1539,7 @@
           "id",
           "name",
           "teacherName",
+          "studentCount",
           "createdAt"
         ],
         "title": "CourseDetailCourse"
@@ -1446,6 +1629,10 @@
             "type": "string",
             "title": "Filename"
           },
+          "byteSize": {
+            "type": "integer",
+            "title": "Bytesize"
+          },
           "pageCount": {
             "anyOf": [
               {
@@ -1475,6 +1662,11 @@
               }
             ],
             "title": "Warning"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
           },
           "updatedAt": {
             "type": "string",
@@ -1510,6 +1702,18 @@
                 "type": "null"
               }
             ]
+          },
+          "latestAttempt": {
+            "type": "integer",
+            "title": "Latestattempt"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/ConversionAttemptItem"
+            },
+            "type": "array",
+            "title": "Attempts",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -1517,12 +1721,15 @@
         "required": [
           "id",
           "fileName",
+          "byteSize",
           "pageCount",
           "version",
           "status",
+          "createdAt",
           "updatedAt",
           "canRetry",
-          "canPreview"
+          "canPreview",
+          "latestAttempt"
         ],
         "title": "CoursewareDetail"
       },
@@ -1648,6 +1855,10 @@
             "type": "string",
             "title": "Filename"
           },
+          "byteSize": {
+            "type": "integer",
+            "title": "Bytesize"
+          },
           "pageCount": {
             "anyOf": [
               {
@@ -1678,6 +1889,11 @@
             ],
             "title": "Warning"
           },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
           "updatedAt": {
             "type": "string",
             "format": "date-time",
@@ -1689,9 +1905,11 @@
         "required": [
           "id",
           "fileName",
+          "byteSize",
           "pageCount",
           "version",
           "status",
+          "createdAt",
           "updatedAt"
         ],
         "title": "CoursewareSummary"
@@ -1842,6 +2060,44 @@
           "teacherName"
         ],
         "title": "MembershipSummary"
+      },
+      "PasswordResetCompleteRequest": {
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "title": "Challengeid"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "challengeId",
+          "code",
+          "password"
+        ],
+        "title": "PasswordResetCompleteRequest"
+      },
+      "PasswordResetStartRequest": {
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "title": "Identifier"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identifier"
+        ],
+        "title": "PasswordResetStartRequest"
       },
       "Position": {
         "properties": {

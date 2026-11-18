@@ -8,6 +8,7 @@ import { PasswordStrengthField } from '../../components/ui/PasswordStrengthField
 
 interface ResetState {
   challengeId: string
+  code: string
 }
 
 /** PG-006 設定新密碼 */
@@ -21,8 +22,8 @@ export function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  if (!state?.challengeId) return <Navigate to="/forgot-password" replace />
-  const { challengeId } = state
+  if (!state?.challengeId || !state.code) return <Navigate to="/forgot-password" replace />
+  const { challengeId, code } = state
 
   async function submit() {
     setSubmitting(true)
@@ -30,8 +31,8 @@ export function ResetPasswordPage() {
     try {
       if (password.length < 8) throw new Error('密碼需至少 8 個字元')
       if (password !== confirm) throw new Error('兩次輸入的密碼不一致')
-      await resetPassword(challengeId, password)
-      navigate('/login', { replace: true })
+      await resetPassword(challengeId, code, password)
+      navigate('/login', { replace: true, state: { reset: true } })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '重設密碼失敗')
     } finally {

@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     CsrfDep,
@@ -31,13 +32,21 @@ from app.schemas.auth import (
     AuthUserResponse,
     CsrfResponse,
     LoginRequest,
+    PasswordResetCompleteRequest,
+    PasswordResetStartRequest,
     RegisterCompleteRequest,
     RegisterStartRequest,
     RegisterStartResponse,
     UserPublic,
 )
-from app.services.sessions import issue_session, revoke_session
-from app.services.verification import create_register_challenge, verify_register_code
+from app.services.sessions import issue_session, revoke_all_user_sessions, revoke_session
+from app.services.verification import (
+    PURPOSE_PASSWORD_RESET,
+    create_challenge,
+    create_register_challenge,
+    verify_code,
+    verify_register_code,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 me_router = APIRouter(tags=["auth"])
@@ -113,6 +122,37 @@ async def get_csrf_token(
     return CsrfResponse(csrf_token=csrf_token)
 
 
+def _validate_registration_fields(
+    *, identifier: str, role: str, display_name: str, password: str
+) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    if not validate_identifier(identifier):
+        fields["identifier"] = "請輸入有效的 +852 手機號碼或電郵地址。"
+    if role not in ROLES:
+        fields["role"] = "角色必須是 TEACHER 或 STUDENT。"
+    if not 2 <= len(display_name) <= 30:
+        fields["displayName"] = "顯示名稱須為 2–30 個字元。"
+    if not 8 <= len(password) <= 64 or password_strength_score(password) < 3:
+        fields["password"] = "密碼須為 8–64 個字元且強度不足。"
+    return fields
+
+
+async def _create_user(
+    db: AsyncSession, *, identifier: str, display_name: str, role: str, password_hash: str
+) -> User:
+    user = User(
+        id=new_id("usr"),
+        identifier=identifier,
+        identifier_type="EMAIL" if "@" in identifier else "PHONE",
+        display_name=display_name,
+        role=role,
+        password_hash=password_hash,
+    )
+    db.add(user)
+    await db.flush()
+    return user
+
+
 @router.post("/register/verification-codes", status_code=201)
 async def start_registration(
     payload: RegisterStartRequest,
@@ -124,15 +164,9 @@ async def start_registration(
     role = payload.role.strip().upper()
     display_name = payload.display_name.strip()
 
-    fields: dict[str, str] = {}
-    if not validate_identifier(identifier):
-        fields["identifier"] = "請輸入有效的 +852 手機號碼或電郵地址。"
-    if role not in ROLES:
-        fields["role"] = "角色必須是 TEACHER 或 STUDENT。"
-    if not 2 <= len(display_name) <= 30:
-        fields["displayName"] = "顯示名稱須為 2–30 個字元。"
-    if not 8 <= len(payload.password) <= 64 or password_strength_score(payload.password) < 3:
-        fields["password"] = "密碼須為 8–64 個字元且強度不足。"
+    fields = _validate_registration_fields(
+        identifier=identifier, role=role, display_name=display_name, password=payload.password
+    )
     if fields:
         raise ApiError(400, "VALIDATION_ERROR", "註冊資料不正確。", fields=fields)
 
@@ -209,6 +243,115 @@ async def complete_registration(
     await db.commit()
     _set_session_cookies(response, raw_token=issued.raw_token, csrf_token=issued.csrf_token)
     return result
+
+
+@router.post("/register/direct", status_code=201, response_model=AuthUserResponse)
+async def register_direct(
+    payload: RegisterStartRequest,
+    request: Request,
+    db: DbDep,
+    _: CsrfDep,
+) -> AuthUserResponse | JSONResponse:
+    """免驗證碼註冊（本版本註冊流程不使用驗證碼）；成功後不簽發工作階段，需另行登入。"""
+    idem: IdempotencyManager = await idempotency_manager(request, None)
+    replay = await idem.lookup(db)
+    if replay is not None:
+        return replay
+
+    identifier = normalize_identifier(payload.identifier)
+    role = payload.role.strip().upper()
+    display_name = payload.display_name.strip()
+
+    fields = _validate_registration_fields(
+        identifier=identifier, role=role, display_name=display_name, password=payload.password
+    )
+    if fields:
+        raise ApiError(400, "VALIDATION_ERROR", "註冊資料不正確。", fields=fields)
+
+    existing = await db.execute(select(User.id).where(User.identifier == identifier))
+    if existing.first() is not None:
+        raise ApiError(409, "IDENTIFIER_TAKEN", "此手機號碼或電郵已註冊。")
+
+    user = await _create_user(
+        db,
+        identifier=identifier,
+        display_name=display_name,
+        role=role,
+        password_hash=hash_password(payload.password),
+    )
+    result = AuthUserResponse(user=_user_public(user))
+    await idem.store(db, status_code=201, payload=result)
+    await db.commit()
+    return result
+
+
+@router.post("/password-reset/verification-codes", status_code=201)
+async def start_password_reset(
+    payload: PasswordResetStartRequest,
+    db: DbDep,
+    _: CsrfDep,
+) -> RegisterStartResponse:
+    """發送重設密碼驗證碼；為防帳號枚舉，無論帳號是否存在皆回 201。"""
+    settings = get_settings()
+    identifier = normalize_identifier(payload.identifier)
+    hint = _identifier_hint(identifier)
+    channel = identifier_delivery(identifier)
+
+    result = await db.execute(select(User.id).where(User.identifier == identifier))
+    if result.first() is not None:
+        challenge, _code, _outbox_path = await create_challenge(
+            db,
+            purpose=PURPOSE_PASSWORD_RESET,
+            identifier=identifier,
+            channel=channel,
+            recipient_hint=hint,
+            payload={"identifier": identifier},
+        )
+        await db.commit()
+        challenge_id = challenge.id
+    else:
+        # 帳號不存在：回傳無法通過驗證的假 challenge，避免洩露註冊狀態。
+        challenge_id = new_id("vch")
+
+    return RegisterStartResponse(
+        challenge_id=challenge_id,
+        delivery=_mask_delivery(channel),
+        identifier_hint=hint,
+        expires_in=settings.verification_code_ttl_seconds,
+        resend_after=settings.verification_resend_seconds,
+    )
+
+
+@router.post("/password-reset", status_code=204)
+async def complete_password_reset(
+    payload: PasswordResetCompleteRequest,
+    db: DbDep,
+    _: CsrfDep,
+) -> Response:
+    """以驗證碼重設密碼；成功後撤銷該帳號所有工作階段。"""
+    fields: dict[str, str] = {}
+    if not 8 <= len(payload.password) <= 64 or password_strength_score(payload.password) < 3:
+        fields["password"] = "密碼須為 8–64 個字元且強度不足。"
+    if fields:
+        raise ApiError(400, "VALIDATION_ERROR", "新密碼不符合安全要求。", fields=fields)
+
+    challenge = await verify_code(
+        db,
+        purpose=PURPOSE_PASSWORD_RESET,
+        challenge_id=payload.challenge_id,
+        code=payload.code,
+    )
+    result = await db.execute(select(User).where(User.identifier == challenge.identifier))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise ApiError(
+            400, "VERIFICATION_CHALLENGE_INVALID", "驗證碼工作階段無效，請重新發送驗證碼。"
+        )
+
+    user.password_hash = hash_password(payload.password)
+    await revoke_all_user_sessions(db, user.id)
+    await db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/login")

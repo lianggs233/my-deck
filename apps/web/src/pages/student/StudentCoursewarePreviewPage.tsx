@@ -67,17 +67,17 @@ export function StudentCoursewarePreviewPage() {
     enabled: Boolean(courseId && coursewareId),
   })
   const annotationsQuery = useQuery({
-    queryKey: ['annotations', coursewareId, pageIndex],
-    queryFn: () => annotationApi.list(coursewareId, pageIndex),
-    enabled: Boolean(coursewareId),
+    queryKey: ['annotations', courseId, coursewareId, pageIndex],
+    queryFn: () => annotationApi.list(courseId, coursewareId, pageIndex),
+    enabled: Boolean(courseId && coursewareId),
   })
 
   const invalidateAnnotations = () =>
-    queryClient.invalidateQueries({ queryKey: ['annotations', coursewareId] })
+    queryClient.invalidateQueries({ queryKey: ['annotations', courseId, coursewareId] })
 
   const createMutation = useMutation({
     mutationFn: () =>
-      annotationApi.create(coursewareId, {
+      annotationApi.create(courseId, coursewareId, {
         pageIndex,
         content: editorText,
         position: draftPosition ?? { x: 0.5, y: 0.5 },
@@ -89,7 +89,7 @@ export function StudentCoursewarePreviewPage() {
   })
   const updateMutation = useMutation({
     mutationFn: () =>
-      annotationApi.update(editingId, {
+      annotationApi.update(courseId, coursewareId, editingId, {
         content: editorText,
         expectedVersion:
           annotationsQuery.data?.find((annotation) => annotation.id === editingId)?.version ?? 1,
@@ -101,7 +101,8 @@ export function StudentCoursewarePreviewPage() {
     },
   })
   const removeMutation = useMutation({
-    mutationFn: (annotation: Annotation) => annotationApi.remove(annotation.id, annotation.version),
+    mutationFn: (annotation: Annotation) =>
+      annotationApi.remove(courseId, coursewareId, annotation.id),
     onSuccess: async () => {
       setDetail(null)
       await invalidateAnnotations()
@@ -225,6 +226,7 @@ export function StudentCoursewarePreviewPage() {
       <SlideCanvas
         pageNumber={page?.pageNumber ?? 1}
         totalPages={courseware.pageCount}
+        imageUrl={page?.imageUrl || undefined}
         onClick={selectCanvasPosition}
         interactive
         annotations={annotationDots}

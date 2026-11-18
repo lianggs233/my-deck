@@ -7,7 +7,6 @@ import { homePath } from './utils/home-path'
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
 import { LoginPage } from './pages/auth/LoginPage'
 import { RegisterPage } from './pages/auth/RegisterPage'
-import { RegisterVerifyPage } from './pages/auth/RegisterVerifyPage'
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage'
 import { ResetVerifyPage } from './pages/auth/ResetVerifyPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -35,7 +34,6 @@ export default function App() {
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/register/verify" element={<RegisterVerifyPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset/verify" element={<ResetVerifyPage />} />
         <Route path="/reset/password" element={<ResetPasswordPage />} />

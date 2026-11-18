@@ -7,11 +7,11 @@ export interface AuthContextValue {
   isLoading: boolean
   login: (identifier: string, password: string) => Promise<AuthSession>
   logout: () => Promise<void>
-  requestRegistrationCode: (request: RegisterRequest) => Promise<RegistrationChallenge>
-  completeRegister: (role: RegisterRequest['role'], displayName: string) => Promise<AuthSession>
+  /** 免驗證碼註冊；成功後回登入頁重新登入 */
+  register: (request: RegisterRequest) => Promise<void>
   requestPasswordReset: (identifier: string) => Promise<RegistrationChallenge>
   verifyPasswordResetCode: (challengeId: string, code: string) => Promise<void>
-  resetPassword: (challengeId: string, password: string) => Promise<void>
+  resetPassword: (challengeId: string, code: string, password: string) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

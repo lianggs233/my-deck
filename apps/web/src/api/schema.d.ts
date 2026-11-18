@@ -75,6 +75,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/register/direct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Direct
+         * @description 免驗證碼註冊（本版本註冊流程不使用驗證碼）；成功後不簽發工作階段，需另行登入。
+         */
+        post: operations["register_direct_api_v1_auth_register_direct_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password-reset/verification-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Password Reset
+         * @description 發送重設密碼驗證碼；為防帳號枚舉，無論帳號是否存在皆回 201。
+         */
+        post: operations["start_password_reset_api_v1_auth_password_reset_verification_codes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Password Reset
+         * @description 以驗證碼重設密碼；成功後撤銷該帳號所有工作階段。
+         */
+        post: operations["complete_password_reset_api_v1_auth_password_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -439,6 +499,24 @@ export interface components {
         AuthUserResponse: {
             user: components["schemas"]["UserPublic"];
         };
+        /** ConversionAttemptItem */
+        ConversionAttemptItem: {
+            /** Attemptno */
+            attemptNo: number;
+            /** Status */
+            status: string;
+            /** Errorcode */
+            errorCode?: string | null;
+            /** Errormessage */
+            errorMessage?: string | null;
+            /**
+             * Startedat
+             * Format: date-time
+             */
+            startedAt: string;
+            /** Finishedat */
+            finishedAt?: string | null;
+        };
         /** CourseCreateRequest */
         CourseCreateRequest: {
             /** Name */
@@ -458,6 +536,8 @@ export interface components {
             code?: string | null;
             /** Teachername */
             teacherName: string;
+            /** Studentcount */
+            studentCount: number;
             /**
              * Createdat
              * Format: date-time
@@ -499,6 +579,8 @@ export interface components {
             id: string;
             /** Filename */
             fileName: string;
+            /** Bytesize */
+            byteSize: number;
             /** Pagecount */
             pageCount: number | null;
             /** Version */
@@ -507,6 +589,11 @@ export interface components {
             status: string;
             /** Warning */
             warning?: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
             /**
              * Updatedat
              * Format: date-time
@@ -519,6 +606,13 @@ export interface components {
             /** Canpreview */
             canPreview: boolean;
             failure?: components["schemas"]["CoursewareFailure"] | null;
+            /** Latestattempt */
+            latestAttempt: number;
+            /**
+             * Attempts
+             * @default []
+             */
+            attempts: components["schemas"]["ConversionAttemptItem"][];
         };
         /** CoursewareDetailResponse */
         CoursewareDetailResponse: {
@@ -559,6 +653,8 @@ export interface components {
             id: string;
             /** Filename */
             fileName: string;
+            /** Bytesize */
+            byteSize: number;
             /** Pagecount */
             pageCount: number | null;
             /** Version */
@@ -567,6 +663,11 @@ export interface components {
             status: string;
             /** Warning */
             warning?: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
             /**
              * Updatedat
              * Format: date-time
@@ -633,6 +734,20 @@ export interface components {
             course: components["schemas"]["CourseSummary"];
             /** Teachername */
             teacherName: string;
+        };
+        /** PasswordResetCompleteRequest */
+        PasswordResetCompleteRequest: {
+            /** Challengeid */
+            challengeId: string;
+            /** Code */
+            code: string;
+            /** Password */
+            password: string;
+        };
+        /** PasswordResetStartRequest */
+        PasswordResetStartRequest: {
+            /** Identifier */
+            identifier: string;
         };
         /** Position */
         Position: {
@@ -855,6 +970,103 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuthUserResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_direct_api_v1_auth_register_direct_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthUserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_password_reset_api_v1_auth_password_reset_verification_codes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisterStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_password_reset_api_v1_auth_password_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

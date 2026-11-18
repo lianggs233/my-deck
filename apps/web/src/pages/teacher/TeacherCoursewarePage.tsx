@@ -1,6 +1,6 @@
 import { Button, Group, Loader, Paper, Stack, Text } from '@mantine/core'
 import { IconArrowLeft, IconPresentation } from '@tabler/icons-react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 
 import { coursewareApi } from '../../api/mvp'
@@ -26,10 +26,20 @@ const secondaryButton = {
 export function TeacherCoursewarePage() {
   const { courseId = '', coursewareId = '' } = useParams()
 
+  const queryClient = useQueryClient()
   const coursewareQuery = useQuery({
     queryKey: ['courseware', courseId, coursewareId],
     queryFn: () => coursewareApi.get(courseId, coursewareId),
     enabled: Boolean(courseId && coursewareId),
+    // 轉換為非同步背景工作：排隊/轉換中每 3 秒輪詢
+    refetchInterval: (query) =>
+      query.state.data && ['QUEUED', 'CONVERTING'].includes(query.state.data.status) ? 3000 : false,
+  })
+  const retryMutation = useMutation({
+    mutationFn: () => coursewareApi.retry(courseId, coursewareId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['courseware', courseId, coursewareId] })
+    },
   })
 
   if (coursewareQuery.isPending) {
@@ -86,9 +96,29 @@ export function TeacherCoursewarePage() {
 
       <Group gap="md" align="center">
         <CoursewareStatusPill status={courseware.status} />
-        <Text fz={16} fw={600} c="#0B6455">
-          全部頁面已準備好，可以預覽或開始授課。
-        </Text>
+        {courseware.status === 'FAILED' || courseware.status === 'TIMED_OUT' ? (
+          <>
+            <Text fz={16} c="#B42318">
+              轉換失敗，可重新嘗試。
+            </Text>
+            <Button
+              variant="default"
+              size="sm"
+              h={40}
+              loading={retryMutation.isPending}
+              styles={secondaryButton}
+              onClick={() => retryMutation.mutate()}
+            >
+              重試轉換
+            </Button>
+          </>
+        ) : (
+          <Text fz={16} fw={600} c="#0B6455">
+            {courseware.status === 'QUEUED' || courseware.status === 'CONVERTING'
+              ? '課件轉換中，完成後即可預覽。'
+              : '全部頁面已準備好，可以預覽或開始授課。'}
+          </Text>
+        )}
       </Group>
 
       <Group align="flex-start" gap="lg" wrap="wrap">
@@ -109,7 +139,7 @@ export function TeacherCoursewarePage() {
             <Group justify="space-between" fz={16}>
               <Text c="#5D7184">輸出格式</Text>
               <Text fw={600} c="#17324D">
-                {courseware.pageCount} 張 PNG 圖片
+                {courseware.pageCount} 張 WebP 圖片
               </Text>
             </Group>
             <Group justify="space-between" fz={16}>
@@ -140,7 +170,11 @@ export function TeacherCoursewarePage() {
                 封面預覽
               </Text>
             </Group>
-            <SlideCanvas pageNumber={1} totalPages={courseware.pageCount} />
+            <SlideCanvas
+              pageNumber={1}
+              totalPages={courseware.pageCount}
+              imageUrl={courseware.pages[0]?.imageUrl || undefined}
+            />
           </Stack>
         </Paper>
       </Group>

@@ -15,7 +15,7 @@ export function StudentCoursePage() {
 
   const courseQuery = useQuery({
     queryKey: ['course', courseId, 'STUDENT'],
-    queryFn: () => courseApi.getCourse(courseId, 'STUDENT'),
+    queryFn: () => courseApi.getCourse(courseId),
     enabled: Boolean(courseId),
   })
   const coursewareQuery = useQuery({

@@ -60,6 +60,23 @@ async def revoke_session(db: AsyncSession, session: Session) -> None:
     await db.flush()
 
 
+async def revoke_all_user_sessions(db: AsyncSession, user_id: str) -> int:
+    """撤銷指定用戶所有有效工作階段（例如重設密碼後），回傳撤銷數量。"""
+    result = await db.execute(
+        select(Session).where(
+            Session.user_id == user_id,
+            Session.revoked_at.is_(None),
+        )
+    )
+    sessions = result.scalars().all()
+    now = utcnow()
+    for session in sessions:
+        session.revoked_at = now
+    if sessions:
+        await db.flush()
+    return len(sessions)
+
+
 async def touch_session(db: AsyncSession, session: Session) -> None:
     """滑動續期：只在剩餘時間不足一半時更新，避免每個請求都寫入。"""
     settings = get_settings()

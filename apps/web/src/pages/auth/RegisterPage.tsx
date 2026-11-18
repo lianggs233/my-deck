@@ -54,9 +54,9 @@ export function RegionCodeSelect() {
   )
 }
 
-/** PG-002 註冊（步驟 1：選角色、填資料、註冊） */
+/** PG-002 註冊（選角色、填資料、免驗證碼直接註冊，成功後回登入頁） */
 export function RegisterPage() {
-  const { requestRegistrationCode } = useAuth()
+  const { register } = useAuth()
   const navigate = useNavigate()
   const [role, setRole] = useState<UserRole>('TEACHER')
   const [channel, setChannel] = useState<Channel>('PHONE')
@@ -66,16 +66,15 @@ export function RegisterPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  async function sendCode(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
     setError('')
     try {
-      const request = { identifier, displayName, role, password }
-      const challenge = await requestRegistrationCode(request)
-      navigate('/register/verify', { state: { request, challenge } })
+      await register({ identifier, displayName, role, password })
+      navigate('/login', { state: { registered: true } })
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '驗證碼發送失敗')
+      setError(cause instanceof Error ? cause.message : '註冊失敗')
     } finally {
       setSubmitting(false)
     }
@@ -102,7 +101,7 @@ export function RegisterPage() {
           </Text>
         ) : null}
 
-        <form onSubmit={(event) => void sendCode(event)}>
+        <form onSubmit={(event) => void submit(event)}>
           <Stack gap="lg">
             <Box component="fieldset" p={0} style={{ border: 0 }}>
               <Text component="legend" fz={16} fw={600} c="#17324D" mb={8}>

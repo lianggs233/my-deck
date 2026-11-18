@@ -210,12 +210,20 @@ async def get_course(course_id: str, user: CurrentUser, db: DbDep) -> CourseDeta
         if membership.first() is None:
             raise ApiError(403, "COURSE_FORBIDDEN", "尚未加入此課程。")
         code = None
+    student_count = (
+        await db.execute(
+            select(func.count())
+            .select_from(CourseMembership)
+            .where(CourseMembership.course_id == course.id)
+        )
+    ).scalar_one()
     return CourseDetailResponse(
         course=CourseDetailCourse(
             id=course.id,
             name=course.name,
             code=code,
             teacher_name=teacher.display_name,
+            student_count=student_count,
             created_at=course.created_at,
         )
     )

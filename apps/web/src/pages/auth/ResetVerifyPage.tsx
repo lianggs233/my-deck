@@ -24,19 +24,19 @@ export function ResetVerifyPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [resendTick, setResendTick] = useState(0)
+  const [challengeId, setChallengeId] = useState(state?.challenge.challengeId ?? '')
   const secondsLeft = useCountdown(state?.challenge.resendAfterSeconds ?? 60, resendTick)
 
   if (!state?.challenge) return <Navigate to="/forgot-password" replace />
 
-  const { identifier, challenge } = state
+  const { identifier } = state
 
   async function verify() {
     setSubmitting(true)
     setError('')
     try {
-      if (code.trim().length !== 6) throw new Error('請輸入 6 位驗證碼')
-      await verifyPasswordResetCode(challenge.challengeId, code)
-      navigate('/reset/password', { state: { challengeId: challenge.challengeId } })
+      await verifyPasswordResetCode(challengeId, code)
+      navigate('/reset/password', { state: { challengeId, code } })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '驗證失敗')
     } finally {
@@ -47,7 +47,8 @@ export function ResetVerifyPage() {
   async function resend() {
     setError('')
     try {
-      await requestPasswordReset(identifier)
+      const challenge = await requestPasswordReset(identifier)
+      setChallengeId(challenge.challengeId)
       setResendTick((value) => value + 1)
       setCode('')
     } catch (cause) {

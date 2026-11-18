@@ -5,16 +5,19 @@ interface SlideCanvasProps {
   /** 顯示的頁碼（右下角） */
   pageNumber?: number
   totalPages?: number
+  /** 轉換後的頁面圖（WebP）；未提供時顯示佔位骨架 */
+  imageUrl?: string
   onClick?: (event: MouseEvent<HTMLDivElement>) => void
   interactive?: boolean
   annotations?: ReactNode
   draftMarker?: ReactNode
 }
 
-/** 課件頁 mock 畫布（16:9 白 slide）：封面預覽／逐頁預覽／學生預覽共用 */
+/** 課件頁畫布（16:9）：有轉換頁圖時顯示真圖，否則顯示佔位骨架；封面預覽／逐頁預覽／學生預覽共用 */
 export function SlideCanvas({
   pageNumber,
   totalPages,
+  imageUrl,
   onClick,
   interactive = false,
   annotations,
@@ -35,13 +38,28 @@ export function SlideCanvas({
         cursor: interactive ? 'crosshair' : 'default',
       }}
     >
-      <Stack gap="sm" p={48} maw="72%">
-        <Box h={20} w="62%" bg="#12836F" style={{ borderRadius: 10 }} />
-        <Box h={10} w="88%" bg="#DCE6EA" style={{ borderRadius: 5 }} mt={12} />
-        <Box h={10} w="76%" bg="#DCE6EA" style={{ borderRadius: 5 }} />
-        <Box h={10} w="58%" bg="#DCE6EA" style={{ borderRadius: 5 }} />
-        <Box h={10} w="70%" bg="#DCE6EA" style={{ borderRadius: 5 }} />
-      </Stack>
+      {imageUrl ? (
+        <Box
+          component="img"
+          src={imageUrl}
+          alt={pageNumber ? `課件第 ${pageNumber} 頁` : '課件頁面'}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+          }}
+        />
+      ) : (
+        <Stack gap="sm" p={48} maw="72%">
+          <Box h={20} w="62%" bg="#12836F" style={{ borderRadius: 10 }} />
+          <Box h={10} w="88%" bg="#DCE6EA" style={{ borderRadius: 5 }} mt={12} />
+          <Box h={10} w="76%" bg="#DCE6EA" style={{ borderRadius: 5 }} />
+          <Box h={10} w="58%" bg="#DCE6EA" style={{ borderRadius: 5 }} />
+          <Box h={10} w="70%" bg="#DCE6EA" style={{ borderRadius: 5 }} />
+        </Stack>
+      )}
       {annotations}
       {draftMarker}
       {pageNumber ? (

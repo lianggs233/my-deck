@@ -124,7 +124,11 @@ export function TeacherCoursewarePreviewPage() {
         </Paper>
 
         <Box style={{ flex: 1, minWidth: 0 }}>
-          <SlideCanvas pageNumber={page?.pageNumber ?? 1} totalPages={courseware.pageCount} />
+          <SlideCanvas
+            pageNumber={page?.pageNumber ?? 1}
+            totalPages={courseware.pageCount}
+            imageUrl={page?.imageUrl || undefined}
+          />
 
           <Group justify="space-between" mt="lg">
             <Button

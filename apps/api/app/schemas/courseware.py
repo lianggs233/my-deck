@@ -29,10 +29,12 @@ class UploadCompleteRequest(ApiModel):
 class CoursewareSummary(ApiModel):
     id: str
     file_name: str
+    byte_size: int
     page_count: int | None
     version: int
     status: str
     warning: str | None = None
+    created_at: datetime
     updated_at: datetime
 
 
@@ -49,11 +51,22 @@ class CoursewareFailure(ApiModel):
     detail: str | None = None
 
 
+class ConversionAttemptItem(ApiModel):
+    attempt_no: int
+    status: str  # RUNNING / SUCCEEDED / FAILED
+    error_code: str | None = None
+    error_message: str | None = None
+    started_at: datetime
+    finished_at: datetime | None = None
+
+
 class CoursewareDetail(CoursewareSummary):
     conversion_due_at: datetime | None = None
     can_retry: bool
     can_preview: bool
     failure: CoursewareFailure | None = None
+    latest_attempt: int
+    attempts: list[ConversionAttemptItem] = []
 
 
 class CoursewareDetailResponse(ApiModel):

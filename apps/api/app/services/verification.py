@@ -15,6 +15,9 @@ from app.db.base import utcnow
 from app.db.models import VerificationChallenge
 from app.services.outbox import append_outbox
 
+PURPOSE_REGISTER = "REGISTER"
+PURPOSE_PASSWORD_RESET = "PASSWORD_RESET"
+
 
 def _error(
     status_code: int, code: str, message: str, fields: dict[str, str] | None = None
@@ -22,27 +25,28 @@ def _error(
     return ApiError(status_code=status_code, code=code, message=message, fields=fields)
 
 
-async def create_register_challenge(
+async def create_challenge(
     db: AsyncSession,
     *,
+    purpose: str,
     identifier: str,
     channel: str,
     recipient_hint: str,
-    registration_payload: dict[str, Any],
+    payload: dict[str, Any],
 ) -> tuple[VerificationChallenge, str, str]:
-    """建立註冊驗證碼 challenge，並把驗證碼寫入 outbox。回傳 (challenge, code, outbox_path)。"""
+    """建立驗證碼 challenge，並把驗證碼寫入 outbox。回傳 (challenge, code, outbox_path)。"""
     settings = get_settings()
 
-    if await _has_pending_challenge(db, identifier):
+    if await _has_pending_challenge(db, identifier, purpose):
         raise _error(429, "VERIFICATION_RESEND_TOO_SOON", "驗證碼發送太頻密，請稍後再試。")
 
     code = new_verification_code()
     challenge = VerificationChallenge(
         id=new_id("vch"),
-        purpose="REGISTER",
+        purpose=purpose,
         identifier=identifier,
-        payload_hash=canonical_digest(registration_payload),
-        payload_json=json.dumps(registration_payload, ensure_ascii=False),
+        payload_hash=canonical_digest(payload),
+        payload_json=json.dumps(payload, ensure_ascii=False),
         code_hash=hmac_hex(code),
         channel=channel,
         attempts=0,
@@ -57,21 +61,40 @@ async def create_register_challenge(
             "recipient": identifier,
             "challengeId": challenge.id,
             "code": code,
-            "purpose": "REGISTER",
+            "purpose": purpose,
             "expiresAt": challenge.expires_at.isoformat(),
         }
     )
     return challenge, code, str(outbox_path)
 
 
-async def _has_pending_challenge(db: AsyncSession, identifier: str) -> bool:
+async def create_register_challenge(
+    db: AsyncSession,
+    *,
+    identifier: str,
+    channel: str,
+    recipient_hint: str,
+    registration_payload: dict[str, Any],
+) -> tuple[VerificationChallenge, str, str]:
+    """建立註冊驗證碼 challenge（向後相容的包裝）。"""
+    return await create_challenge(
+        db,
+        purpose=PURPOSE_REGISTER,
+        identifier=identifier,
+        channel=channel,
+        recipient_hint=recipient_hint,
+        payload=registration_payload,
+    )
+
+
+async def _has_pending_challenge(db: AsyncSession, identifier: str, purpose: str) -> bool:
     settings = get_settings()
     cooldown_start = utcnow() - timedelta(seconds=settings.verification_resend_seconds)
     result = await db.execute(
         select(VerificationChallenge.id)
         .where(
             VerificationChallenge.identifier == identifier,
-            VerificationChallenge.purpose == "REGISTER",
+            VerificationChallenge.purpose == purpose,
             VerificationChallenge.used_at.is_(None),
             VerificationChallenge.created_at >= cooldown_start,
         )
@@ -80,18 +103,19 @@ async def _has_pending_challenge(db: AsyncSession, identifier: str) -> bool:
     return result.first() is not None
 
 
-async def verify_register_code(
+async def verify_code(
     db: AsyncSession,
     *,
+    purpose: str,
     challenge_id: str,
     code: str,
 ) -> VerificationChallenge:
-    """驗證註冊驗證碼，成功後標記 challenge 已使用。"""
+    """驗證指定用途的驗證碼，成功後標記 challenge 已使用。"""
     settings = get_settings()
     result = await db.execute(
         select(VerificationChallenge).where(
             VerificationChallenge.id == challenge_id,
-            VerificationChallenge.purpose == "REGISTER",
+            VerificationChallenge.purpose == purpose,
         )
     )
     challenge = result.scalar_one_or_none()
@@ -114,6 +138,16 @@ async def verify_register_code(
     challenge.used_at = utcnow()
     await db.flush()
     return challenge
+
+
+async def verify_register_code(
+    db: AsyncSession,
+    *,
+    challenge_id: str,
+    code: str,
+) -> VerificationChallenge:
+    """驗證註冊驗證碼（向後相容的包裝）。"""
+    return await verify_code(db, purpose=PURPOSE_REGISTER, challenge_id=challenge_id, code=code)
 
 
 def challenge_payload_digest(challenge: VerificationChallenge) -> str:

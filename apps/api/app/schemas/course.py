@@ -52,6 +52,7 @@ class CourseDetailCourse(ApiModel):
     name: str
     code: str | None = None
     teacher_name: str
+    student_count: int
     created_at: datetime
 
 

@@ -12,10 +12,16 @@ export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const state = location.state as { from?: string; registered?: boolean; reset?: boolean } | null
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const notice = state?.registered
+    ? '註冊成功！請使用新帳號登入。'
+    : state?.reset
+      ? '密碼已重設，請使用新密碼登入。'
+      : ''
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -23,7 +29,6 @@ export function LoginPage() {
     setError('')
     try {
       const session = await login(identifier, password)
-      const state = location.state as { from?: string } | null
       navigate(state?.from ?? homePath(session.user.role), { replace: true })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '登入失敗')
@@ -47,6 +52,12 @@ export function LoginPage() {
             使用已驗證的手機號碼或電郵。
           </Text>
         </div>
+
+        {notice ? (
+          <Text fz={16} fw={600} c="#0B6455" role="status">
+            {notice}
+          </Text>
+        ) : null}
 
         {error ? (
           <Text fz={16} c="#B42318" role="alert">

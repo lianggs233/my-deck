@@ -1,12 +1,12 @@
 # My Deck API Schema 契約
 
-- 文件版本：V0.1
-- 文件狀態：已補全 P0 與完整產品 schema；待確認
-- 更新時間：2026-11-17 23:02:23 HKT
-- API 基準：`docs/api-design.md` V0.4
-- 登入／權限基準：`docs/auth-permission-design.md` V0.2
-- 需求基準：`docs/requirements.md` V0.20
-- 權限基準：`docs/permissions.md` V0.9
+- 文件版本：V0.2
+- 文件狀態：已補全 P0 與完整產品 schema；註冊驗證碼 schema（3.2 節）已確認移至後續優化（2026-11-18），本期註冊採免驗證碼端點
+- 更新時間：2026-11-18 21:40:00 HKT
+- API 基準：`docs/api-design.md` V0.5
+- 登入／權限基準：`docs/auth-permission-design.md` V0.3
+- 需求基準：`docs/requirements.md` V0.21
+- 權限基準：`docs/permissions.md` V0.10
 
 ## 1. 目的與共用規則
 
@@ -82,7 +82,9 @@
 | `identifier` | string | 是 | 已驗證手機或電郵；回應可遮罩 |
 | `status` | string enum | 是 | `ACTIVE`、`DISABLED` |
 
-### 3.2 註冊驗證碼
+### 3.2 註冊驗證碼（後續優化，本期不交付）
+
+> 2026-11-18 確認：註冊擁有者驗證碼移至後續優化，本期前端不使用本節端點；本期註冊採免驗證碼 `POST /api/v1/auth/register/direct`（請求欄位同 `RegisterStartRequest`，回應 `201` 僅含 `user`，不簽發 session，註冊後返回登入頁）。密碼重設驗證碼 schema 維持本期交付。以下契約保留供後續優化啟用。
 
 `RegisterStartRequest`
 

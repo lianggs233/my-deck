@@ -1,12 +1,12 @@
 # My Deck 登入、工作階段與權限設計方案
 
-- 文件版本：V0.2
-- 文件狀態：已按使用者「前後端并行開發、優先定義 API、方便後期對接」要求整理；管理員分類權限已同步；待確認
+- 文件版本：V0.3
+- 文件狀態：已按使用者「前後端并行開發、優先定義 API、方便後期對接」要求整理；管理員分類權限已同步；註冊擁有者驗證已確認移至後續優化（2026-11-18），本期註冊採免驗證碼流程，密碼重設驗證維持本期交付
 - 建立時間：2026-11-17 22:10:16 HKT
-- 需求基準：`docs/requirements.md` V0.20
-- 權限基準：`docs/permissions.md` V0.9
-- API 基準：`docs/api-design.md` V0.3
-- 技術基準：`docs/tech-stack.md` V0.4
+- 需求基準：`docs/requirements.md` V0.21
+- 權限基準：`docs/permissions.md` V0.10
+- API 基準：`docs/api-design.md` V0.5
+- 技術基準：`docs/tech-stack.md` V0.5
 
 ## 1. 目標與邊界
 

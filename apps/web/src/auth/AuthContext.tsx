@@ -29,11 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async register(request) {
         await authApi.register(request)
       },
-      requestPasswordReset: (identifier) => authApi.requestPasswordReset(identifier),
-      verifyPasswordResetCode: (challengeId, code) =>
-        authApi.verifyPasswordResetCode(challengeId, code),
-      resetPassword: (challengeId, code, password) =>
-        authApi.resetPassword(challengeId, code, password),
+      resetPasswordDirect: (identifier, oldPassword, newPassword) =>
+        authApi.resetPasswordDirect(identifier, oldPassword, newPassword),
     }),
     [currentUserQuery.data, currentUserQuery.isPending, queryClient],
   )

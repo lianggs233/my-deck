@@ -1,12 +1,12 @@
 # My Deck API Schema 契約
 
-- 文件版本：V0.2
-- 文件狀態：已補全 P0 與完整產品 schema；註冊驗證碼 schema（3.2 節）已確認移至後續優化（2026-11-18），本期註冊採免驗證碼端點
-- 更新時間：2026-11-18 21:40:00 HKT
-- API 基準：`docs/api-design.md` V0.5
-- 登入／權限基準：`docs/auth-permission-design.md` V0.3
-- 需求基準：`docs/requirements.md` V0.21
-- 權限基準：`docs/permissions.md` V0.10
+- 文件版本：V0.3
+- 文件狀態：已補全 P0 與完整產品 schema；註冊驗證碼 schema（3.2 節）已確認移至後續優化（2026-11-18），本期註冊採免驗證碼端點；忘記密碼已確認改為舊密碼驗證直接重設（2026-11-18），驗證碼重設 schema 移至後續優化
+- 更新時間：2026-11-18 22:30:00 HKT
+- API 基準：`docs/api-design.md` V0.6
+- 登入／權限基準：`docs/auth-permission-design.md` V0.4
+- 需求基準：`docs/requirements.md` V0.22
+- 權限基準：`docs/permissions.md` V0.11
 
 ## 1. 目的與共用規則
 
@@ -144,11 +144,23 @@
 
 ### 3.4 忘記密碼
 
-`PasswordResetStartRequest`：`identifier: string`。
+> 本期忘記密碼採舊密碼驗證直接重設（2026-11-18 確認）；驗證碼重設 schema（`PasswordResetStartRequest` 等）屬後續優化，本期前端不使用。
 
-`PasswordResetStartResponse`：`challengeId`、`deliveryHint`、`expiresAt`、`resendAvailableAt`；無論帳號是否存在都使用一致防列舉回饋。
+`PasswordResetDirectRequest`（本期）
 
-`PasswordResetCompleteRequest`
+| 欄位 | 型別 | 必填 | 規則 |
+|---|---|---|---|
+| `identifier` | string | 是 | `+852` 8 位手機或合法電郵 |
+| `oldPassword` | string | 是 | 目前使用的密碼；不得出現在日誌 |
+| `newPassword` | string | 是 | 與註冊相同密碼規則（8–64 字元，zxcvbn ≥ 3） |
+
+成功回 `204`，撤銷該帳號全部工作階段。帳號不存在與舊密碼錯誤採一致 `401` 防列舉回饋；失敗計入登入鎖定（連續 5 次鎖 15 分鐘）。
+
+`PasswordResetStartRequest`（後續優化）：`identifier: string`。
+
+`PasswordResetStartResponse`（後續優化）：`challengeId`、`deliveryHint`、`expiresAt`、`resendAvailableAt`；無論帳號是否存在都使用一致防列舉回饋。
+
+`PasswordResetCompleteRequest`（後續優化）
 
 | 欄位 | 型別 | 必填 | 規則 |
 |---|---|---|---|
@@ -156,7 +168,7 @@
 | `code` | string | 是 | 重設驗證碼 |
 | `newPassword` | string | 是 | 與註冊相同密碼規則 |
 
-成功回 `204`，撤銷該帳號全部工作階段。
+成功回 `204`，撤銷該帳號全部工作階段。（後續優化啟用時適用）
 
 ## 4. 課程 schema
 
@@ -624,7 +636,7 @@
 |---|---|---|
 | 註冊驗證碼／完成註冊 | `RegisterStartRequest`、`RegisterCompleteRequest` | `RegisterStartResponse`、`RegisterCompleteResponse` |
 | 登入／登出／me／CSRF | `LoginRequest` | `LoginResponse`、`LogoutResponse`、`MeResponse`、`CsrfResponse` |
-| 忘記密碼 | `PasswordResetStartRequest`、`PasswordResetCompleteRequest` | `PasswordResetStartResponse`、204 |
+| 忘記密碼 | `PasswordResetDirectRequest`（本期）；`PasswordResetStartRequest`、`PasswordResetCompleteRequest`（後續優化） | 204；`PasswordResetStartResponse`（後續優化） |
 | 建立／列出課程 | `CourseCreateRequest` | `CourseCreateResponse`、`CourseListResponse` |
 | 學生課程成員列表 | query 分頁 | `MembershipListResponse` |
 | 課程碼加入 | `JoinCourseRequest` | `JoinCourseResponse` |

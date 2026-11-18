@@ -249,6 +249,41 @@
         }
       }
     },
+    "/api/v1/auth/password-reset/direct": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Direct Password Reset",
+        "description": "免驗證碼重設密碼（以舊密碼驗證身分）；成功後撤銷該帳號所有工作階段。\n\n舊密碼驗證失敗計入與登入共用的鎖定規則：同一帳號於鎖定視窗內\n連續失敗達上限後暫時鎖定。帳號不存在與舊密碼錯誤回傳一致錯誤，\n避免洩露帳號是否存在。",
+        "operationId": "direct_password_reset_api_v1_auth_password_reset_direct_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetDirectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -2084,6 +2119,30 @@
           "password"
         ],
         "title": "PasswordResetCompleteRequest"
+      },
+      "PasswordResetDirectRequest": {
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "title": "Identifier"
+          },
+          "oldPassword": {
+            "type": "string",
+            "title": "Oldpassword"
+          },
+          "newPassword": {
+            "type": "string",
+            "title": "Newpassword"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identifier",
+          "oldPassword",
+          "newPassword"
+        ],
+        "title": "PasswordResetDirectRequest"
       },
       "PasswordResetStartRequest": {
         "properties": {

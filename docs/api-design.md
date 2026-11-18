@@ -1,12 +1,12 @@
 # My Deck API 設計（MVP 與完整產品）
 
-- 文件版本：V0.5
-- 文件狀態：已按使用者「先補全 API 設計」補齊 REQ-001～REQ-018 及管理員契約；可作前後端并行開發基線，MVP 實作範圍不變；註冊擁有者驗證碼端點已確認移至後續優化（2026-11-18），本期註冊採免驗證碼 `register/direct`
+- 文件版本：V0.6
+- 文件狀態：已按使用者「先補全 API 設計」補齊 REQ-001～REQ-018 及管理員契約；可作前後端并行開發基線，MVP 實作範圍不變；註冊擁有者驗證碼端點已確認移至後續優化（2026-11-18），本期註冊採免驗證碼 `register/direct`；忘記密碼已確認改為舊密碼驗證直接重設（2026-11-18），驗證碼重設端點移至後續優化
 - 更新時間：2026-11-18 HKT
 - 適用範圍：P0 MVP 契約，以及 REQ-006～REQ-018 與管理員完整產品契約；標示 P1／P2 的端點只供後續對接，**不代表納入 6 天 MVP 實作**
-- 需求基準：`docs/requirements.md` V0.21
-- 權限基準：`docs/permissions.md` V0.9
-- 技術基準：`docs/tech-stack.md` V0.4
+- 需求基準：`docs/requirements.md` V0.22
+- 權限基準：`docs/permissions.md` V0.10
+- 技術基準：`docs/tech-stack.md` V0.5
 - API 風格：FastAPI、REST/JSON，統一前綴 `/api/v1`
 - 「標籤功能」已確認為 PPT 個人文字標註；若日後改指課程分類標籤，須另設 CourseTag API
 
@@ -24,8 +24,8 @@
 
 ### 2.1 認證與 CSRF
 
-登入、工作階段、CSRF、角色及資源權限的 FastAPI／React 實作約定，以 `docs/auth-permission-design.md` V0.2 為準；本文件中的端點與錯誤格式須與該方案一致。
-- Schema 契約：`docs/api-schemas.md` V0.1；所有 request／response、共用 model、Socket.IO payload 及錯誤 envelope 以該文件為單一欄位基準，避免前後端雙份定義漂移。
+登入、工作階段、CSRF、角色及資源權限的 FastAPI／React 實作約定，以 `docs/auth-permission-design.md` V0.3 為準；本文件中的端點與錯誤格式須與該方案一致。
+- Schema 契約：`docs/api-schemas.md` V0.2；所有 request／response、共用 model、Socket.IO payload 及錯誤 envelope 以該文件為單一欄位基準，避免前後端雙份定義漂移。
 
 - 登入後由伺服端簽發 `HttpOnly`、`Secure`、`SameSite=Lax` 的 Session Cookie。
 - 所有 Cookie 認證的修改請求必須驗證 `X-CSRF-Token`。
@@ -105,7 +105,7 @@ GET /api/v1/auth/csrf
 
 ### 3.2 發送註冊／密碼重設驗證碼
 
-> 註冊驗證碼端點已移至後續優化（2026-11-18 確認），本期前端不使用；本期註冊採免驗證碼 `POST /api/v1/auth/register/direct`（成功後不簽發工作階段，需另行登入）。密碼重設驗證碼端點維持本期交付。後端註冊驗證碼端點已實作並保留，供後續優化啟用。
+> 註冊及密碼重設驗證碼端點均已移至後續優化（2026-11-18 確認），本期前端不使用：本期註冊採免驗證碼 `POST /api/v1/auth/register/direct`（成功後不簽發工作階段，需另行登入）；本期忘記密碼採舊密碼驗證 `POST /api/v1/auth/password-reset/direct`（見 3.4 節）。後端驗證碼端點（含 `POST /api/v1/auth/password-reset` 完成重設）已實作並保留，供後續優化啟用。
 
 ```http
 POST /api/v1/auth/register/verification-codes
@@ -168,7 +168,30 @@ POST /api/v1/auth/register
 - 回應 `201` 及目前使用者資料。
 - 重複提交同一註冊操作返回原結果；不得建立第二個有效帳號。
 
-### 3.4 登入／登出／目前使用者
+### 3.4 以舊密碼直接重設密碼（本期）
+
+> 本期忘記密碼流程（2026-11-18 確認）：不發驗證碼，以舊密碼驗證身份後直接重設；真的忘記舊密碼的使用者須由管理員協助。驗證碼重設端點（`POST /api/v1/auth/password-reset/verification-codes`、`POST /api/v1/auth/password-reset`）保留為後續優化。
+
+```http
+POST /api/v1/auth/password-reset/direct
+```
+
+```json
+{
+  "identifier": "+85291234567",
+  "oldPassword": "目前使用的密碼",
+  "newPassword": "新密碼"
+}
+```
+
+成功：
+
+- 帳號存在且舊密碼正確後更新密碼，撤銷該帳號全部工作階段，回應 `204 No Content`。
+- `newPassword` 須為 8–64 個字元且通過強度檢查（zxcvbn ≥ 3），失敗回 `400 VALIDATION_ERROR`（`fields.newPassword`）。
+- 帳號不存在與舊密碼錯誤採一致回饋 `401 AUTH_INVALID_CREDENTIALS`（「帳號或舊密碼不正確。」），不泄露帳號是否存在。
+- 舊密碼失敗計入登入鎖定：同一帳號連續失敗 5 次鎖定 15 分鐘，鎖定期間回 `429 LOGIN_LOCKED`。
+
+### 3.5 登入／登出／目前使用者
 
 ```http
 POST /api/v1/auth/login

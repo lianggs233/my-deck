@@ -135,6 +135,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/password-reset/direct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Direct Password Reset
+         * @description 免驗證碼重設密碼（以舊密碼驗證身分）；成功後撤銷該帳號所有工作階段。
+         *
+         *     舊密碼驗證失敗計入與登入共用的鎖定規則：同一帳號於鎖定視窗內
+         *     連續失敗達上限後暫時鎖定。帳號不存在與舊密碼錯誤回傳一致錯誤，
+         *     避免洩露帳號是否存在。
+         */
+        post: operations["direct_password_reset_api_v1_auth_password_reset_direct_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -744,6 +768,15 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** PasswordResetDirectRequest */
+        PasswordResetDirectRequest: {
+            /** Identifier */
+            identifier: string;
+            /** Oldpassword */
+            oldPassword: string;
+            /** Newpassword */
+            newPassword: string;
+        };
         /** PasswordResetStartRequest */
         PasswordResetStartRequest: {
             /** Identifier */
@@ -1058,6 +1091,37 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PasswordResetCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    direct_password_reset_api_v1_auth_password_reset_direct_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetDirectRequest"];
             };
         };
         responses: {

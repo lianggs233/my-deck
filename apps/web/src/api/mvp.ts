@@ -162,6 +162,19 @@ export const authApi = {
     return toUser(data.user)
   },
 
+  /** 本期忘記密密碼流程：舊密碼驗證直接重設（不發驗證碼）；成功後撤銷全部工作階段 */
+  async resetPasswordDirect(
+    identifier: string,
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    await apiFetch('/auth/password-reset/direct', {
+      method: 'POST',
+      body: { identifier, oldPassword, newPassword },
+    })
+  },
+
+  /** 後續優化：驗證碼重設流程（後端端點保留，本期前端不使用） */
   async requestPasswordReset(identifier: string): Promise<RegistrationChallenge> {
     const data = await apiFetch<ApiRegisterStart>('/auth/password-reset/verification-codes', {
       method: 'POST',
@@ -181,6 +194,7 @@ export const authApi = {
     }
   },
 
+  /** 後續優化：驗證碼重設流程（後端端點保留，本期前端不使用） */
   async resetPassword(challengeId: string, code: string, password: string): Promise<void> {
     await apiFetch('/auth/password-reset', {
       method: 'POST',

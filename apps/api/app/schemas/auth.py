@@ -43,6 +43,12 @@ class PasswordResetCompleteRequest(ApiModel):
     password: str
 
 
+class PasswordResetDirectRequest(ApiModel):
+    identifier: str
+    old_password: str
+    new_password: str
+
+
 class LoginRequest(ApiModel):
     identifier: str
     password: str

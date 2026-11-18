@@ -1,11 +1,11 @@
 # My Deck 開發技術棧方案
 
-- 文件版本：V0.5
-- 文件狀態：Python 後端、前端 Vite 與 lint 方向已由使用者確認；其餘供應商與部署細節待確認；註冊擁有者驗證已確認移至後續優化（2026-11-18），驗證碼基礎設施本期僅服務密碼重設
+- 文件版本：V0.6
+- 文件狀態：Python 後端、前端 Vite 與 lint 方向已由使用者確認；其餘供應商與部署細節待確認；註冊及密碼重設擁有者驗證均已確認移至後續優化（2026-11-18），本期註冊免驗證碼、忘記密碼以舊密碼驗證，驗證碼基礎設施本期暫不使用
 - 更新日期：2026-11-18
-- 需求基準：`docs/requirements.md` V0.21
-- MVP 基準：`docs/mvp-priority.md` V0.4
-- 權限基準：`docs/permissions.md` V0.10
+- 需求基準：`docs/requirements.md` V0.22
+- MVP 基準：`docs/mvp-priority.md` V0.5
+- 權限基準：`docs/permissions.md` V0.11
 
 ## 1. 方案目標與原則
 

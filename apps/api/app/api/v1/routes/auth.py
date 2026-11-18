@@ -33,6 +33,7 @@ from app.schemas.auth import (
     CsrfResponse,
     LoginRequest,
     PasswordResetCompleteRequest,
+    PasswordResetDirectRequest,
     PasswordResetStartRequest,
     RegisterCompleteRequest,
     RegisterStartRequest,
@@ -349,6 +350,59 @@ async def complete_password_reset(
         )
 
     user.password_hash = hash_password(payload.password)
+    await revoke_all_user_sessions(db, user.id)
+    await db.commit()
+    return Response(status_code=204)
+
+
+@router.post("/password-reset/direct", status_code=204)
+async def direct_password_reset(
+    payload: PasswordResetDirectRequest,
+    request: Request,
+    db: DbDep,
+    _: CsrfDep,
+) -> Response:
+    """免驗證碼重設密碼（以舊密碼驗證身分）；成功後撤銷該帳號所有工作階段。
+
+    舊密碼驗證失敗計入與登入共用的鎖定規則：同一帳號於鎖定視窗內
+    連續失敗達上限後暫時鎖定。帳號不存在與舊密碼錯誤回傳一致錯誤，
+    避免洩露帳號是否存在。
+    """
+    settings = get_settings()
+    identifier = normalize_identifier(payload.identifier)
+
+    fields: dict[str, str] = {}
+    if not validate_identifier(identifier):
+        fields["identifier"] = "請輸入有效的 +852 手機號碼或電郵地址。"
+    if not 8 <= len(payload.new_password) <= 64 or (
+        password_strength_score(payload.new_password) < 3
+    ):
+        fields["newPassword"] = "新密碼須為 8–64 個字元且強度不足。"
+    if fields:
+        raise ApiError(400, "VALIDATION_ERROR", "重設密碼資料不正確。", fields=fields)
+
+    ip = request.client.host if request.client else "unknown"
+    now = datetime.now(UTC)
+    lock_window_start = now - timedelta(minutes=settings.login_lock_minutes)
+    failures = await db.execute(
+        select(func.count(LoginAttempt.id)).where(
+            LoginAttempt.identifier == identifier,
+            LoginAttempt.success.is_(False),
+            LoginAttempt.created_at >= lock_window_start,
+        )
+    )
+    if (failures.scalar() or 0) >= settings.login_max_failures:
+        raise ApiError(429, "LOGIN_LOCKED", "失敗次數過多，請稍後再試。")
+
+    result = await db.execute(select(User).where(User.identifier == identifier))
+    user = result.scalar_one_or_none()
+    ok = user is not None and verify_password(user.password_hash, payload.old_password)
+    db.add(LoginAttempt(identifier=identifier, ip=ip, success=ok))
+    if not ok or user is None:
+        await db.commit()
+        raise ApiError(401, "AUTH_INVALID_CREDENTIALS", "帳號或舊密碼不正確。")
+
+    user.password_hash = hash_password(payload.new_password)
     await revoke_all_user_sessions(db, user.id)
     await db.commit()
     return Response(status_code=204)

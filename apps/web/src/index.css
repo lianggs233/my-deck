@@ -1,9 +1,27 @@
+/**
+ * Penpot「all page」設計基準的全域樣式與 CSS 變數。
+ * 元件優先使用 Mantine 主題色（見 theme.ts），此處放重複出現的版式數值。
+ */
 :root {
+  /* 派生色 */
+  --md-deep-teal: #0b6455;
+  --md-navy-soft: #24445f;
+  --md-navy-text: #c9d8e2;
+  --md-yellow-tint: #fff4cf;
+  --md-border: #d8e2e8;
+  --md-hairline: #dce6ea;
+
+  /* 版式 */
+  --md-content-width: 82rem;
+  --md-header-height: 6rem;
+  --md-card-radius: 1.5rem;
+  --md-control-height: 3.5rem;
+
   font-family: 'Noto Sans TC Variable', 'Noto Sans TC', sans-serif;
-  color: var(--mantine-color-dark-8);
-  background: var(--mantine-color-gray-0);
   font-synthesis: none;
   text-rendering: optimizelegibility;
+  color: #17324d;
+  background: #f5f8f6;
 }
 
 * {
@@ -14,6 +32,7 @@ body {
   margin: 0;
   min-width: 20rem;
   min-height: 100vh;
+  background: #f5f8f6;
 }
 
 button,
@@ -21,27 +40,73 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+a {
+  color: var(--md-deep-teal);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
 #root {
   min-height: 100vh;
 }
 
-.hero {
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 90% 0%, var(--mantine-color-teal-1), transparent 55%),
-    var(--mantine-color-white);
-  border: 0;
+/* 內頁內容容器：寬 1312 置中 */
+.md-container {
+  width: 100%;
+  max-width: var(--md-content-width);
+  margin-inline: auto;
+  padding-inline: 1rem;
 }
 
-.status-card {
-  height: 100%;
-  background: var(--mantine-color-white);
-  border: 0;
+/* kicker：左側黃色直條 + 黃字標籤（認證頁左欄） */
+.md-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #ffc94a;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.md-kicker::before {
+  content: '';
+  width: 0.5rem;
+  height: 5rem;
+  border-radius: 0.5rem;
+  background: #ffc94a;
+}
+
+/* Mint 提示列（建立課程／加入課程對話框） */
+.md-notice {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  background: #ddf4ec;
+  color: var(--md-deep-teal);
+}
+
+/* 淡藍提示列（個人標註） */
+.md-notice-blue {
+  background: #e7f0fb;
+  color: #1e5fa8;
+}
+
+/* 淡黃提示列（重設密碼） */
+.md-notice-yellow {
+  background: var(--md-yellow-tint);
+  color: #17324d;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .status-card,
-  .hero {
-    transition: border-color 200ms ease;
+  .md-clickable {
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease;
   }
 }

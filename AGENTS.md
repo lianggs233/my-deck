@@ -13,7 +13,7 @@
 - 修改 API 后，在 `apps/api` 执行 `uv run python scripts/export_openapi.py`，再在 `apps/web` 执行 `corepack pnpm generate:api`。
 - 前端验证：`corepack pnpm lint`、`corepack pnpm lint:style`、`corepack pnpm typecheck`、`corepack pnpm format:check`、`corepack pnpm build`。
 - 后端验证：`uv run ruff format --check .`、`uv run ruff check .`、`uv run mypy app scripts`。
-- 前端已启动 MVP 页面骨架：`src/types/domain.d.ts` 声明领域类型，`src/api/mvp.ts` 为 mock／API 对接预留层，`src/auth/`、`src/components/`、`src/pages/` 提供登录注册、角色首页、课程详情、课件预览及个人标注交互；生成类型仍未覆盖业务 API，业务后端接口未接入前不得声称已完成对接。
+- 前端已按 Penpot「all page」切片重写（2026-11-18）：`src/theme.ts` 锚定切片色板（teal #12836F 主色、navy/yellow/mint/muted/error），共用元件集中于 `src/components/ui/`（BrandMark、AuthLayout、AppHeader、StatusPill、HeroBanner、EmptyStateCard、PageHeading、CoursewareRow、SlideCanvas、ConfirmDialog 等 14 个），页面对应 PG-001～014 与 OL-001～011 切片（`mvp - wireframe` 页不作开发参考）；`src/api/mvp.ts` 为 mock／API 对接预留层（含密码重设、加入课程、上传完成回报），业务 API 尚未对接前不得声称已完成对接。
 - 后端已完成 MVP P0 API：`apps/api/app` 提供注册（验证码 challenge 绑定完整注册内容，验证码写入本地 outbox）、登录（失败锁定）、Session Cookie＋CSRF、`/api/v1/me`、课程建立／列表／课程码加入／详情、课件上传（本机存储适配预签 PUT，`PUT /api/v1/uploads/{id}/content`）／完成／转换（asyncio 背景工作＋Pillow demo 转换器，输出 WebP 页图，.ppt 无 LibreOffice 时失败并附原因）／页预览／重试、学生个人文字标注 CRUD（乐观锁 expectedVersion、本人隔离）；统一 `{error:{code,message,fields,requestId}}` 错误格式，6 个写入端点支持 Idempotency-Key。
 - 后端演示数据：`uv run python scripts/seed_demo.py` 创建数据表与演示账号（teacher@mydeck.dev／student@mydeck.dev，密码 MyDeck#2026）及课程成员关系；数据库与存储默认在 `apps/api/var/`（已 gitignore）。
 - 目前未新增前端测试命令；新增结构、依赖或命令后应重新检查并更新本文件及 README。

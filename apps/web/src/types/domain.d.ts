@@ -161,3 +161,58 @@ export interface ClassroomPageState {
   pageCount: number
   stateVersion: number
 }
+
+/** 課堂進行中狀態（學生／訪客可見，不含課堂碼與老師 ID） */
+export interface ClassroomLiveState {
+  id: string
+  name: string
+  courseId: string
+  coursewareId: string
+  coursewareVersion: number
+  status: ClassroomStatus
+  pageIndex: number
+  pageCount: number
+  stateVersion: number
+  startedAt: string
+}
+
+export type ParticipantRole = 'STUDENT' | 'GUEST'
+
+export interface ClassroomParticipant {
+  id: string
+  role: ParticipantRole
+  displayName: string
+  guestId?: string
+  /** 個人標註／寫入能力；訪客一律 false */
+  canWrite: boolean
+  /** 共享標註層可見性；訪客一律 false */
+  canViewShared: boolean
+}
+
+export interface ClassroomSnapshotState {
+  pageIndex: number
+  pageCount: number
+  stateVersion: number
+  status: ClassroomStatus
+  pageImageUrl?: string
+  pageThumbUrl?: string
+}
+
+export interface ClassroomJoinResult {
+  participant: ClassroomParticipant
+  classroom: ClassroomLiveState
+  snapshot: ClassroomSnapshotState
+  courseName?: string
+}
+
+export interface ClassroomSnapshotResult {
+  classroom: ClassroomLiveState
+  snapshot: ClassroomSnapshotState
+  participant?: ClassroomParticipant
+  courseName: string
+}
+
+export interface ActiveClassroom {
+  classroom?: ClassroomLiveState
+  courseName: string
+}

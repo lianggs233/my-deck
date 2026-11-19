@@ -1,12 +1,18 @@
 import type { components } from './schema'
 import { apiFetch, apiPutRaw, sha256Hex } from './http'
 import type {
+  ActiveClassroom,
   Annotation,
   AuthSession,
   Classroom,
   ClassroomDetail,
   ClassroomJoinInfo,
+  ClassroomJoinResult,
+  ClassroomLiveState,
   ClassroomPageState,
+  ClassroomParticipant,
+  ClassroomSnapshotResult,
+  ClassroomSnapshotState,
   ConversionAttempt,
   Course,
   CourseDetail,
@@ -45,6 +51,12 @@ type ApiClassroomStartResponse = Schemas['ClassroomStartResponse']
 type ApiClassroomDetailResponse = Schemas['ClassroomDetailResponse']
 type ApiJoinInfo = Schemas['JoinInfo']
 type ApiPageState = Schemas['PageStateResponse']
+type ApiClassroomLiveState = Schemas['ClassroomLiveState']
+type ApiParticipant = Schemas['ParticipantSummary']
+type ApiClassroomSnapshot = Schemas['ClassroomSnapshot']
+type ApiClassroomJoinResponse = Schemas['ClassroomJoinResponse']
+type ApiClassroomSnapshotResponse = Schemas['ClassroomSnapshotResponse']
+type ApiActiveClassroomResponse = Schemas['ActiveClassroomResponse']
 
 function toUser(user: ApiUser): User {
   return { id: user.id, displayName: user.displayName, role: user.role as UserRole }
@@ -355,6 +367,43 @@ function toJoinInfo(joinInfo: ApiJoinInfo): ClassroomJoinInfo {
   return { code: joinInfo.code, joinUrl: joinInfo.joinUrl, canCopy: joinInfo.canCopy }
 }
 
+function toLiveState(classroom: ApiClassroomLiveState): ClassroomLiveState {
+  return {
+    id: classroom.id,
+    name: classroom.name,
+    courseId: classroom.courseId,
+    coursewareId: classroom.coursewareId,
+    coursewareVersion: classroom.coursewareVersion,
+    status: classroom.status as ClassroomLiveState['status'],
+    pageIndex: classroom.pageIndex,
+    pageCount: classroom.pageCount,
+    stateVersion: classroom.stateVersion,
+    startedAt: classroom.startedAt,
+  }
+}
+
+function toParticipant(participant: ApiParticipant): ClassroomParticipant {
+  return {
+    id: participant.id,
+    role: participant.role as ClassroomParticipant['role'],
+    displayName: participant.displayName,
+    guestId: participant.guestId ?? undefined,
+    canWrite: participant.canWrite,
+    canViewShared: participant.canViewShared,
+  }
+}
+
+function toSnapshot(snapshot: ApiClassroomSnapshot): ClassroomSnapshotState {
+  return {
+    pageIndex: snapshot.pageIndex,
+    pageCount: snapshot.pageCount,
+    stateVersion: snapshot.stateVersion,
+    status: snapshot.status as ClassroomSnapshotState['status'],
+    pageImageUrl: snapshot.pageImageUrl ?? undefined,
+    pageThumbUrl: snapshot.pageThumbUrl ?? undefined,
+  }
+}
+
 export const classroomApi = {
   /** 開始授課：建立進行中課堂並回傳課堂碼／加入連結 */
   async start(
@@ -400,6 +449,62 @@ export const classroomApi = {
       pageCount: data.pageCount,
       stateVersion: data.stateVersion,
     }
+  },
+
+  /** 以課堂碼加入（學生或訪客）；guest 首次加入不帶 guestId，回應會附新身份 */
+  async join(code: string, guestId?: string | null): Promise<ClassroomJoinResult> {
+    const data = await apiFetch<ApiClassroomJoinResponse>('/classrooms/join', {
+      method: 'POST',
+      body: { code, guestId: guestId ?? null },
+    })
+    return {
+      participant: toParticipant(data.participant),
+      classroom: toLiveState(data.classroom),
+      snapshot: toSnapshot(data.snapshot),
+    }
+  },
+
+  /** 已加入課程學生由課程入口直接加入（重複加入回傳同一參與者） */
+  async joinFromCourse(classroomId: string): Promise<ClassroomJoinResult> {
+    const data = await apiFetch<ApiClassroomJoinResponse>(`/classrooms/${classroomId}/join`, {
+      method: 'POST',
+    })
+    return {
+      participant: toParticipant(data.participant),
+      classroom: toLiveState(data.classroom),
+      snapshot: toSnapshot(data.snapshot),
+    }
+  },
+
+  /** 重連／輪詢快照：老師、已加入課堂的學生或帶 guestId 的訪客 */
+  async snapshot(classroomId: string, guestId?: string | null): Promise<ClassroomSnapshotResult> {
+    const query = guestId ? `?guestId=${encodeURIComponent(guestId)}` : ''
+    const data = await apiFetch<ApiClassroomSnapshotResponse>(
+      `/classrooms/${classroomId}/snapshot${query}`,
+    )
+    return {
+      classroom: toLiveState(data.classroom),
+      snapshot: toSnapshot(data.snapshot),
+      participant: data.participant ? toParticipant(data.participant) : undefined,
+      courseName: data.courseName,
+    }
+  },
+
+  /** 課程目前是否有進行中課堂（課程頁橫幅入口） */
+  async active(courseId: string): Promise<ActiveClassroom> {
+    const data = await apiFetch<ApiActiveClassroomResponse>(
+      `/courses/${courseId}/classrooms/active`,
+    )
+    return {
+      classroom: data.classroom ? toLiveState(data.classroom) : undefined,
+      courseName: data.courseName,
+    }
+  },
+
+  /** 即時事件串流（SSE）位址：翻頁觸發器，連線失敗時由輪詢補上 */
+  eventStreamUrl(classroomId: string, guestId?: string | null): string {
+    const query = guestId ? `?guestId=${encodeURIComponent(guestId)}` : ''
+    return `/api/v1/classrooms/${classroomId}/events${query}`
   },
 }
 

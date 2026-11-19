@@ -244,3 +244,61 @@ class Classroom(Base):
     state_version: Mapped[int] = mapped_column(Integer, default=1)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class GuestIdentity(Base):
+    """訪客身份（REQ-007）：不可修改的隨機顯示名稱；瀏覽器只在 localStorage 保存 guestId。"""
+
+    __tablename__ = "guest_identities"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    display_name: Mapped[str] = mapped_column(String(50))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ClassroomParticipant(Base):
+    """課堂參與者（REQ-007）：學生加入不建立課程成員；訪客以 guest_id 識別。"""
+
+    __tablename__ = "classroom_participants"
+    __table_args__ = (
+        Index(
+            "uq_participant_classroom_user",
+            "classroom_id",
+            "user_id",
+            unique=True,
+            sqlite_where=text("user_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_participant_classroom_guest",
+            "classroom_id",
+            "guest_id",
+            unique=True,
+            sqlite_where=text("guest_id IS NOT NULL"),
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    classroom_id: Mapped[str] = mapped_column(String(40), ForeignKey("classrooms.id"), index=True)
+    user_id: Mapped[str | None] = mapped_column(
+        String(40), ForeignKey("users.id"), nullable=True, default=None
+    )
+    guest_id: Mapped[str | None] = mapped_column(
+        String(40), ForeignKey("guest_identities.id"), nullable=True, default=None
+    )
+    role: Mapped[str] = mapped_column(String(10))  # STUDENT / GUEST
+    display_name: Mapped[str] = mapped_column(String(50))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ClassroomJoinAttempt(Base):
+    """課堂碼加入嘗試（REQ-007 無效嘗試限流：按帳號及來源 IP 計數）。"""
+
+    __tablename__ = "classroom_join_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str | None] = mapped_column(String(40), nullable=True, default=None, index=True)
+    ip: Mapped[str] = mapped_column(String(64), index=True)
+    success: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

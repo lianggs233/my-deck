@@ -58,6 +58,22 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+async def get_optional_user(request: Request, db: DbDep) -> User | None:
+    """可選登入：帶有效 session 回傳使用者，否則回傳 None（供學生／訪客共用端點）。"""
+    settings = get_settings()
+    raw_token = request.cookies.get(settings.session_cookie_name)
+    if not raw_token:
+        return None
+    session = await get_valid_session(db, raw_token)
+    if session is None:
+        return None
+    result = await db.execute(select(User).where(User.id == session.user_id))
+    return result.scalar_one_or_none()
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_user)]
+
+
 def require_role(*roles: str) -> Callable[[User], Coroutine[Any, Any, User]]:
     async def checker(user: CurrentUser) -> User:
         if user.role not in roles:

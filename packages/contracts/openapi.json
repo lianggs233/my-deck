@@ -1270,6 +1270,49 @@
         }
       }
     },
+    "/api/v1/courses/{course_id}/classrooms/active": {
+      "get": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Get Active Classroom",
+        "description": "課程入口橫幅：查目前是否有進行中的課堂（已加入課程的學生／老師可讀）。",
+        "operationId": "get_active_classroom_api_v1_courses__course_id__classrooms_active_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveClassroomResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/courses/{course_id}/classrooms": {
       "post": {
         "tags": [
@@ -1466,10 +1509,235 @@
           }
         }
       }
+    },
+    "/api/v1/classrooms/join": {
+      "post": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Join Classroom",
+        "description": "以課堂碼加入（學生或訪客）。\n\nREQ-007：無效嘗試按帳號及來源 IP 可配置限流；未加入課程的學生加入課堂但不成為課程成員；\n訪客由服務端產生不可修改的隨機名稱及唯一 guestId，重複加入回傳同一參與者記錄。",
+        "operationId": "join_classroom_api_v1_classrooms_join_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassroomJoinRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassroomJoinResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/join": {
+      "post": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Join Classroom From Course",
+        "description": "已加入課程的學生由課程入口直接加入；重複加入回傳同一參與者記錄。\n\nREQ-007：加入課堂不會建立課程成員關係；此端點只允許該課程的已加入學生。",
+        "operationId": "join_classroom_from_course_api_v1_classrooms__classroom_id__join_post",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassroomJoinResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/snapshot": {
+      "get": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Get Classroom Snapshot",
+        "description": "權威快照：學生重連／輪詢取得教師當前頁與本人可見資料。",
+        "operationId": "get_classroom_snapshot_api_v1_classrooms__classroom_id__snapshot_get",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          },
+          {
+            "name": "guestId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Guestid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassroomSnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/events": {
+      "get": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Classroom Events",
+        "description": "課堂狀態推送（SSE）：老師翻頁後學生／訪客即時跟上；客戶端仍有 3 秒輪詢作後備。",
+        "operationId": "classroom_events_api_v1_classrooms__classroom_id__events_get",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          },
+          {
+            "name": "guestId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Guestid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ActiveClassroomResponse": {
+        "properties": {
+          "classroom": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClassroomLiveState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "courseName": {
+            "type": "string",
+            "title": "Coursename"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "courseName"
+        ],
+        "title": "ActiveClassroomResponse"
+      },
       "AnnotationCreateRequest": {
         "properties": {
           "pageIndex": {
@@ -1659,6 +1927,199 @@
           "courseName"
         ],
         "title": "ClassroomDetailResponse"
+      },
+      "ClassroomJoinRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Code"
+          },
+          "guestId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guestid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "ClassroomJoinRequest"
+      },
+      "ClassroomJoinResponse": {
+        "properties": {
+          "participant": {
+            "$ref": "#/components/schemas/ParticipantSummary"
+          },
+          "classroom": {
+            "$ref": "#/components/schemas/ClassroomLiveState"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ClassroomSnapshot"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "participant",
+          "classroom",
+          "snapshot"
+        ],
+        "title": "ClassroomJoinResponse"
+      },
+      "ClassroomLiveState": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "courseId": {
+            "type": "string",
+            "title": "Courseid"
+          },
+          "coursewareId": {
+            "type": "string",
+            "title": "Coursewareid"
+          },
+          "coursewareVersion": {
+            "type": "integer",
+            "title": "Coursewareversion"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "pageIndex": {
+            "type": "integer",
+            "title": "Pageindex"
+          },
+          "pageCount": {
+            "type": "integer",
+            "title": "Pagecount"
+          },
+          "stateVersion": {
+            "type": "integer",
+            "title": "Stateversion"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Startedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "courseId",
+          "coursewareId",
+          "coursewareVersion",
+          "status",
+          "pageIndex",
+          "pageCount",
+          "stateVersion",
+          "startedAt"
+        ],
+        "title": "ClassroomLiveState",
+        "description": "學生／訪客可見的課堂即時狀態（不含負責老師、課堂碼等管理資訊）。"
+      },
+      "ClassroomSnapshot": {
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "title": "Pageindex"
+          },
+          "pageCount": {
+            "type": "integer",
+            "title": "Pagecount"
+          },
+          "stateVersion": {
+            "type": "integer",
+            "title": "Stateversion"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "pageImageUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pageimageurl"
+          },
+          "pageThumbUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagethumburl"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pageIndex",
+          "pageCount",
+          "stateVersion",
+          "status"
+        ],
+        "title": "ClassroomSnapshot"
+      },
+      "ClassroomSnapshotResponse": {
+        "properties": {
+          "classroom": {
+            "$ref": "#/components/schemas/ClassroomLiveState"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ClassroomSnapshot"
+          },
+          "participant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ParticipantSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "courseName": {
+            "type": "string",
+            "title": "Coursename"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "classroom",
+          "snapshot",
+          "courseName"
+        ],
+        "title": "ClassroomSnapshotResponse"
       },
       "ClassroomStartRequest": {
         "properties": {
@@ -2551,6 +3012,51 @@
           "expectedStateVersion"
         ],
         "title": "PageTurnRequest"
+      },
+      "ParticipantSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "guestId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guestid"
+          },
+          "canWrite": {
+            "type": "boolean",
+            "title": "Canwrite"
+          },
+          "canViewShared": {
+            "type": "boolean",
+            "title": "Canviewshared"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "displayName",
+          "canWrite",
+          "canViewShared"
+        ],
+        "title": "ParticipantSummary"
       },
       "PasswordResetCompleteRequest": {
         "properties": {

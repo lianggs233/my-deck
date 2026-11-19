@@ -463,6 +463,26 @@ export interface paths {
         patch: operations["update_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations__annotation_id__patch"];
         trace?: never;
     };
+    "/api/v1/courses/{course_id}/classrooms/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Active Classroom
+         * @description 課程入口橫幅：查目前是否有進行中的課堂（已加入課程的學生／老師可讀）。
+         */
+        get: operations["get_active_classroom_api_v1_courses__course_id__classrooms_active_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/courses/{course_id}/classrooms": {
         parameters: {
             query?: never;
@@ -531,10 +551,101 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/classrooms/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join Classroom
+         * @description 以課堂碼加入（學生或訪客）。
+         *
+         *     REQ-007：無效嘗試按帳號及來源 IP 可配置限流；未加入課程的學生加入課堂但不成為課程成員；
+         *     訪客由服務端產生不可修改的隨機名稱及唯一 guestId，重複加入回傳同一參與者記錄。
+         */
+        post: operations["join_classroom_api_v1_classrooms_join_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join Classroom From Course
+         * @description 已加入課程的學生由課程入口直接加入；重複加入回傳同一參與者記錄。
+         *
+         *     REQ-007：加入課堂不會建立課程成員關係；此端點只允許該課程的已加入學生。
+         */
+        post: operations["join_classroom_from_course_api_v1_classrooms__classroom_id__join_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Classroom Snapshot
+         * @description 權威快照：學生重連／輪詢取得教師當前頁與本人可見資料。
+         */
+        get: operations["get_classroom_snapshot_api_v1_classrooms__classroom_id__snapshot_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Classroom Events
+         * @description 課堂狀態推送（SSE）：老師翻頁後學生／訪客即時跟上；客戶端仍有 3 秒輪詢作後備。
+         */
+        get: operations["classroom_events_api_v1_classrooms__classroom_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActiveClassroomResponse */
+        ActiveClassroomResponse: {
+            classroom?: components["schemas"]["ClassroomLiveState"] | null;
+            /** Coursename */
+            courseName: string;
+        };
         /** AnnotationCreateRequest */
         AnnotationCreateRequest: {
             /** Pageindex */
@@ -597,6 +708,71 @@ export interface components {
         /** ClassroomDetailResponse */
         ClassroomDetailResponse: {
             classroom: components["schemas"]["ClassroomSummary"];
+            /** Coursename */
+            courseName: string;
+        };
+        /** ClassroomJoinRequest */
+        ClassroomJoinRequest: {
+            /** Code */
+            code: string;
+            /** Guestid */
+            guestId?: string | null;
+        };
+        /** ClassroomJoinResponse */
+        ClassroomJoinResponse: {
+            participant: components["schemas"]["ParticipantSummary"];
+            classroom: components["schemas"]["ClassroomLiveState"];
+            snapshot: components["schemas"]["ClassroomSnapshot"];
+        };
+        /**
+         * ClassroomLiveState
+         * @description 學生／訪客可見的課堂即時狀態（不含負責老師、課堂碼等管理資訊）。
+         */
+        ClassroomLiveState: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Courseid */
+            courseId: string;
+            /** Coursewareid */
+            coursewareId: string;
+            /** Coursewareversion */
+            coursewareVersion: number;
+            /** Status */
+            status: string;
+            /** Pageindex */
+            pageIndex: number;
+            /** Pagecount */
+            pageCount: number;
+            /** Stateversion */
+            stateVersion: number;
+            /**
+             * Startedat
+             * Format: date-time
+             */
+            startedAt: string;
+        };
+        /** ClassroomSnapshot */
+        ClassroomSnapshot: {
+            /** Pageindex */
+            pageIndex: number;
+            /** Pagecount */
+            pageCount: number;
+            /** Stateversion */
+            stateVersion: number;
+            /** Status */
+            status: string;
+            /** Pageimageurl */
+            pageImageUrl?: string | null;
+            /** Pagethumburl */
+            pageThumbUrl?: string | null;
+        };
+        /** ClassroomSnapshotResponse */
+        ClassroomSnapshotResponse: {
+            classroom: components["schemas"]["ClassroomLiveState"];
+            snapshot: components["schemas"]["ClassroomSnapshot"];
+            participant?: components["schemas"]["ParticipantSummary"] | null;
             /** Coursename */
             courseName: string;
         };
@@ -917,6 +1093,21 @@ export interface components {
             pageIndex?: number | null;
             /** Expectedstateversion */
             expectedStateVersion: number;
+        };
+        /** ParticipantSummary */
+        ParticipantSummary: {
+            /** Id */
+            id: string;
+            /** Role */
+            role: string;
+            /** Displayname */
+            displayName: string;
+            /** Guestid */
+            guestId?: string | null;
+            /** Canwrite */
+            canWrite: boolean;
+            /** Canviewshared */
+            canViewShared: boolean;
         };
         /** PasswordResetCompleteRequest */
         PasswordResetCompleteRequest: {
@@ -1939,6 +2130,37 @@ export interface operations {
             };
         };
     };
+    get_active_classroom_api_v1_courses__course_id__classrooms_active_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveClassroomResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     start_classroom_api_v1_courses__course_id__classrooms_post: {
         parameters: {
             query?: never;
@@ -2059,6 +2281,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageStateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_classroom_api_v1_classrooms_join_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassroomJoinRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassroomJoinResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_classroom_from_course_api_v1_classrooms__classroom_id__join_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassroomJoinResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_classroom_snapshot_api_v1_classrooms__classroom_id__snapshot_get: {
+        parameters: {
+            query?: {
+                guestId?: string | null;
+            };
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassroomSnapshotResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    classroom_events_api_v1_classrooms__classroom_id__events_get: {
+        parameters: {
+            query?: {
+                guestId?: string | null;
+            };
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

@@ -1,9 +1,9 @@
-import { Loader, Paper, Stack, Tabs, Text } from '@mantine/core'
-import { useQuery } from '@tanstack/react-query'
+import { Button, Group, Loader, Paper, Stack, Tabs, Text } from '@mantine/core'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
-import { courseApi, coursewareApi } from '../../api/mvp'
+import { classroomApi, courseApi, coursewareApi } from '../../api/mvp'
 import { CoursewareRow } from '../../components/ui/CoursewareRow'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { PageHeading } from '../../components/ui/PageHeading'
@@ -14,6 +14,7 @@ import { PageHeading } from '../../components/ui/PageHeading'
  */
 export function StudentCoursePage() {
   const { courseId = '' } = useParams()
+  const navigate = useNavigate()
 
   const courseQuery = useQuery({
     queryKey: ['course', courseId, 'STUDENT'],
@@ -25,8 +26,18 @@ export function StudentCoursePage() {
     queryFn: () => coursewareApi.list(courseId),
     enabled: Boolean(courseId),
   })
-
+  const activeClassroomQuery = useQuery({
+    queryKey: ['classroom-active', courseId],
+    queryFn: () => classroomApi.active(courseId),
+    enabled: Boolean(courseId),
+    refetchInterval: 15_000,
+  })
   const { showError } = useErrorAlert()
+  const joinMutation = useMutation({
+    mutationFn: (classroomId: string) => classroomApi.joinFromCourse(classroomId),
+    onSuccess: (result) => navigate(`/classrooms/${result.classroom.id}`),
+    onError: (cause) => showError(cause instanceof Error ? cause.message : '加入課堂失敗'),
+  })
   const courseLoadError = courseQuery.error
   useEffect(() => {
     if (courseLoadError) {
@@ -49,6 +60,7 @@ export function StudentCoursePage() {
   const readyCoursewares = (coursewareQuery.data?.items ?? []).filter(
     (item) => item.status === 'READY' || item.status === 'READY_WITH_WARNINGS',
   )
+  const activeClassroom = activeClassroomQuery.data?.classroom
 
   return (
     <Stack gap={32}>
@@ -57,6 +69,31 @@ export function StudentCoursePage() {
         title={course.name}
         meta={`${course.teacherName} · ${course.schoolYear ?? ''} · ${course.studentCount ?? 0} 位學生`}
       />
+
+      {activeClassroom ? (
+        <Paper radius="lg" bg="#DDF4EC" p="lg" style={{ border: '1px solid #BFE6D6' }}>
+          <Group justify="space-between" wrap="wrap" gap="md">
+            <div>
+              <Text fz={14} fw={600} c="#0B6455">
+                課堂進行中
+              </Text>
+              <Text fz={20} fw={700} c="#17324D">
+                {activeClassroom.name}
+              </Text>
+              <Text fz={16} c="#5D7184">
+                第 {activeClassroom.pageIndex + 1} / {activeClassroom.pageCount} 頁
+              </Text>
+            </div>
+            <Button
+              radius="md"
+              loading={joinMutation.isPending}
+              onClick={() => joinMutation.mutate(activeClassroom.id)}
+            >
+              進入課堂
+            </Button>
+          </Group>
+        </Paper>
+      ) : null}
 
       <Paper radius="lg" bg="#FFFFFF" style={{ border: '1px solid #D8E2E8' }}>
         <Tabs defaultValue="courseware">

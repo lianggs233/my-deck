@@ -17,6 +17,12 @@ def new_classroom_code() -> str:
     return "".join(secrets.choice(COURSE_CODE_ALPHABET) for _ in range(6))
 
 
+def new_guest_name() -> str:
+    """訪客隨機顯示名稱（不可修改）：訪客-XXXX，字元集排除易混淆字元（REQ-007）。"""
+    suffix = "".join(secrets.choice(COURSE_CODE_ALPHABET) for _ in range(4))
+    return f"訪客-{suffix}"
+
+
 def new_verification_code() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 

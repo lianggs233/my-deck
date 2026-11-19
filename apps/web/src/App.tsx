@@ -8,6 +8,8 @@ import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
 import { LoginPage } from './pages/auth/LoginPage'
 import { RegisterPage } from './pages/auth/RegisterPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { ClassroomViewPage } from './pages/public/ClassroomViewPage'
+import { JoinClassroomPage } from './pages/public/JoinClassroomPage'
 import { StatusPage } from './pages/StatusPage'
 import { StudentCoursePage } from './pages/student/StudentCoursePage'
 import { StudentCoursewarePreviewPage } from './pages/student/StudentCoursewarePreviewPage'
@@ -34,6 +36,9 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/join" element={<JoinClassroomPage />} />
+        <Route path="/join/:code" element={<JoinClassroomPage />} />
+        <Route path="/classrooms/:classroomId" element={<ClassroomViewPage />} />
 
         <Route
           element={

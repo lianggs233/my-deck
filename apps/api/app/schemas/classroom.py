@@ -62,3 +62,61 @@ class PageStateResponse(ApiModel):
     page_index: int
     page_count: int
     state_version: int
+
+
+class ClassroomLiveState(ApiModel):
+    """學生／訪客可見的課堂即時狀態（不含負責老師、課堂碼等管理資訊）。"""
+
+    id: str
+    name: str
+    course_id: str
+    courseware_id: str
+    courseware_version: int
+    status: str  # LIVE / ENDED
+    page_index: int
+    page_count: int
+    state_version: int
+    started_at: datetime
+
+
+class ParticipantSummary(ApiModel):
+    id: str
+    role: str  # STUDENT / GUEST
+    display_name: str
+    guest_id: str | None = None
+    # 訪客只能觀看目前頁；學生可寫入（個人標註等，實際由 REQ-010／011 端點把關）
+    can_write: bool
+    # 訪客不可查看共享標註層與老師回覆
+    can_view_shared: bool
+
+
+class ClassroomSnapshot(ApiModel):
+    page_index: int
+    page_count: int
+    state_version: int
+    status: str
+    page_image_url: str | None = None
+    page_thumb_url: str | None = None
+
+
+class ClassroomJoinRequest(ApiModel):
+    code: str = Field(min_length=1, max_length=32)
+    guest_id: str | None = Field(default=None, max_length=64)
+
+
+class ClassroomJoinResponse(ApiModel):
+    participant: ParticipantSummary
+    classroom: ClassroomLiveState
+    snapshot: ClassroomSnapshot
+
+
+class ClassroomSnapshotResponse(ApiModel):
+    classroom: ClassroomLiveState
+    snapshot: ClassroomSnapshot
+    participant: ParticipantSummary | None = None
+    course_name: str
+
+
+class ActiveClassroomResponse(ApiModel):
+    classroom: ClassroomLiveState | None = None
+    course_name: str

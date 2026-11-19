@@ -9,15 +9,21 @@ from pptx import Presentation
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.ids import new_id
 from app.db.base import utcnow
 from app.db.engine import session_factory
 from app.db.models import ConversionAttempt, Courseware, CoursewarePage
+from app.services.office_convert import (
+    FULL_LONG_EDGE,
+    THUMB_LONG_EDGE,
+    OfficeConversionError,
+    RenderedPage,
+    render_office_pages,
+    to_webp,
+)
 from app.services.storage import read_bytes, save_bytes, upload_object_path
 
-FULL_LONG_EDGE = 1920
-THUMB_LONG_EDGE = 320
 PAGE_WIDTH = 1600
 PAGE_HEIGHT = 900
 
@@ -66,15 +72,6 @@ def _render_page(text: str, index: int, total: int) -> Image.Image:
     return image
 
 
-def _to_webp(image: Image.Image, long_edge: int) -> bytes:
-    scale = min(1.0, long_edge / max(image.size))
-    if scale < 1.0:
-        image = image.resize((int(image.width * scale), int(image.height * scale)))
-    buffer = io.BytesIO()
-    image.save(buffer, format="WEBP", quality=85)
-    return buffer.getvalue()
-
-
 async def _is_latest_attempt(db: AsyncSession, courseware_id: str, attempt_no: int) -> bool:
     """舊回調防護：只有目前最新的轉換嘗試可以寫入課件狀態。
 
@@ -88,6 +85,48 @@ async def _is_latest_attempt(db: AsyncSession, courseware_id: str, attempt_no: i
     )
     latest = int(result.scalar_one_or_none() or 0)
     return latest == attempt_no
+
+
+async def _render_pages(
+    settings: Settings, original: bytes, file_name: str
+) -> tuple[list[RenderedPage], str, str | None]:
+    """依設定選擇轉換器，回傳（頁面圖像, 最終狀態, 警告訊息）。
+
+    - libreoffice：正式渲染（PPT/PPTX 皆支援）→ READY；
+    - placeholder：MVP 文字摘要預覽（僅 .pptx）→ READY_WITH_WARNINGS。
+    """
+    if settings.converter == "libreoffice":
+        rendered = await render_office_pages(
+            original,
+            file_name,
+            soffice_bin=settings.libreoffice_bin,
+            timeout_seconds=settings.libreoffice_timeout_seconds,
+        )
+        if len(rendered) > settings.max_courseware_pages:
+            raise _TooManyPages(
+                f"投影片頁數 {len(rendered)} 超過上限 {settings.max_courseware_pages} 頁。"
+            )
+        return rendered, "READY", None
+
+    if not file_name.lower().endswith(".pptx"):
+        raise _UnsupportedFormat("Demo 轉換器僅支援 .pptx；.ppt 舊格式請改用 LibreOffice 轉換器。")
+    texts = _extract_slide_texts(original)
+    if len(texts) > settings.max_courseware_pages:
+        raise _TooManyPages(
+            f"投影片頁數 {len(texts)} 超過上限 {settings.max_courseware_pages} 頁。"
+        )
+    total = len(texts)
+    rendered = []
+    for index, text in enumerate(texts, start=1):
+        image = _render_page(text, index, total)
+        full, width, height = to_webp(image.copy(), FULL_LONG_EDGE)
+        thumb, _, _ = to_webp(image, THUMB_LONG_EDGE)
+        rendered.append(RenderedPage(full=full, thumb=thumb, width=width, height=height))
+    return (
+        rendered,
+        "READY_WITH_WARNINGS",
+        "Demo 轉換器：目前以文字摘要產生預覽圖，正式渲染請啟用 LibreOffice 轉換器。",
+    )
 
 
 async def run_conversion(courseware_id: str, attempt_no: int) -> None:
@@ -112,34 +151,24 @@ async def run_conversion(courseware_id: str, attempt_no: int) -> None:
         attempt = attempt_result.scalar_one_or_none()
         try:
             original = read_bytes(courseware.original_object_key)
-            is_pptx = courseware.file_name.lower().endswith(".pptx")
-            if not is_pptx:
-                raise _UnsupportedFormat(
-                    "目前環境未安裝 LibreOffice，.ppt 舊格式暫不支援，請改用 .pptx。"
-                )
-            texts = _extract_slide_texts(original)
-            if len(texts) > settings.max_courseware_pages:
-                raise _TooManyPages(
-                    f"投影片頁數 {len(texts)} 超過上限 {settings.max_courseware_pages} 頁。"
-                )
+            rendered, final_status, warning = await _render_pages(
+                settings, original, courseware.file_name
+            )
 
-            total = len(texts)
+            total = len(rendered)
             pages: list[CoursewarePage] = []
-            for index, text in enumerate(texts, start=1):
-                image = _render_page(text, index, total)
-                full = _to_webp(image.copy(), FULL_LONG_EDGE)
-                thumb = _to_webp(image, THUMB_LONG_EDGE)
+            for index, page_image in enumerate(rendered, start=1):
                 base_key = f"coursewares/{courseware.id}/attempts/{attempt_no}/pages/{index - 1}"
-                save_bytes(f"{base_key}.webp", full)
-                save_bytes(f"{base_key}.thumb.webp", thumb)
+                save_bytes(f"{base_key}.webp", page_image.full)
+                save_bytes(f"{base_key}.thumb.webp", page_image.thumb)
                 written_keys.extend([f"{base_key}.webp", f"{base_key}.thumb.webp"])
                 pages.append(
                     CoursewarePage(
                         id=new_id("page"),
                         courseware_id=courseware.id,
                         page_index=index - 1,
-                        width=image.width,
-                        height=image.height,
+                        width=page_image.width,
+                        height=page_image.height,
                         full_key=f"{base_key}.webp",
                         thumb_key=f"{base_key}.thumb.webp",
                         version=courseware.version,
@@ -158,11 +187,9 @@ async def run_conversion(courseware_id: str, attempt_no: int) -> None:
                 return
 
             db.add_all(pages)
-            courseware.status = "READY_WITH_WARNINGS"
+            courseware.status = final_status
             courseware.page_count = total
-            courseware.warning = (
-                "Demo 轉換器：目前以文字摘要產生預覽圖，正式渲染待 LibreOffice 整合。"
-            )
+            courseware.warning = warning
             courseware.failure_code = None
             courseware.failure_message = None
             courseware.failure_detail = None
@@ -174,6 +201,8 @@ async def run_conversion(courseware_id: str, attempt_no: int) -> None:
             await _fail(db, courseware, attempt, "UNSUPPORTED_FORMAT", str(error))
         except _TooManyPages as error:
             await _fail(db, courseware, attempt, "TOO_MANY_PAGES", str(error))
+        except OfficeConversionError as error:
+            await _fail(db, courseware, attempt, "CONVERSION_FAILED", str(error))
         except Exception as error:  # noqa: BLE001
             await _fail(db, courseware, attempt, "CONVERSION_FAILED", f"轉換失敗：{error}")
 

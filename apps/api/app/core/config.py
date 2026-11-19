@@ -57,7 +57,10 @@ class Settings(BaseSettings):
     upload_expiry_seconds: int = 600
     max_upload_bytes: int = 104_857_600
     max_courseware_pages: int = 100
-    converter: Literal["placeholder", "libreoffice"] = "placeholder"
+    # 轉換器：libreoffice＝正式渲染（PPT/PPTX→PDF→WebP）；placeholder＝MVP 文字摘要預覽。
+    converter: Literal["placeholder", "libreoffice"] = "libreoffice"
+    libreoffice_bin: str = "soffice"
+    libreoffice_timeout_seconds: int = 240
     conversion_timeout_seconds: int = 300
 
     @property

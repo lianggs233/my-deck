@@ -101,9 +101,7 @@
 
 | 補充實作 | TASK-172～174 標註移動位置 UI | 2026-11-19 14:45:00 HKT（約） | 2026-11-19 15:30:00 HKT（約） | 待使用者檢查 | REQ-010：學生在標註詳情對話框點「移動位置」進入移動模式——標記變可拖動（grab/grabbing 游標、高亮描邊）、原位置顯示虛線殘影、提示列即時顯示候選歸一化座標（x/y 三位小數）；放開後按「確認保存新位置」才 PATCH（position＋expectedVersion 樂觀鎖，文字／頁面／所有權不變）；「取消移動」或拖出幻燈片範圍或切換頁面→取消候選回到服務端原位置並提示；保存失敗（服務端拒絕／409／斷網或結果未知）→退出移動模式、重新拉取、標記回復服務端原位置並提示重新移動，絕不產生第二個標記或本地假成功。純前端改動（後端 PATCH 本已支援 position）。驗證：lint／typecheck／format:check／build 全過；Playwright move-check.mjs 19 項全過（進入移動模式、拖動預覽＋座標、確認保存＋重新整理持久化＋文字不變、拖出範圍取消＋提示、取消移動、頁面切換取消＋提示、模擬 409 拒絕回復原位置無幽靈標記、模擬斷網回復原位置）；verify.mjs 滾動回歸 27/27；測試標註已刪除還原。看板三卡轉 In progress 待檢查。 |
 
----
-
-## 附錄：實際工時記錄（2026-11-19 回填）
+| 階段 B 技術債 | LibreOffice 正式轉換器（取代 Pillow demo） | 2026-11-19 16:10 HKT（約） | 2026-11-19 17:30 HKT（約） | 已完成 | 依使用者確認的順序 A→B→D→C→E 進入階段 B 第一項（無看板卡）；使用者批准 apt 安裝。① apt 裝 libreoffice-impress＋poppler-utils（soffice 24.2.7.2／pdftoppm 24.02.0，文泉驛字型已足夠渲染中文）；② config 新增 converter（預設 libreoffice，env MY_DECK_CONVERTER 可回退 placeholder）／libreoffice_bin／libreoffice_timeout_seconds；③ 新檔 app/services/office_convert.py（render_office_pages：asyncio.to_thread 包 soffice --headless 獨立 profile→PDF→pdftoppm 150DPI→WebP 1920/320，OfficeConversionError 可讀原因）；④ conversion.py 重構（_render_pages 分派兩後端；libreoffice 下 PPT/PPTX 皆 READY 無警告；placeholder 僅 .pptx READY_WITH_WARNINGS）；⑤ 驗證：ruff/mypy 全綠；verify_lo.py 15 項全過（真實中文 pptx→READY＋1920×1080 真實渲染、soffice 產 .ppt→READY、損壞檔 CONVERSION_FAILED 附可讀原因、頁數上限 TOO_MANY_PAGES、placeholder 回歸）；真實 uvicorn 煙測（演示帳號上傳 16:9 pptx→READY、頁圖 WebP 1920×1080 非佔位）；煙測課件已清理。前端零改動（READY 狀態原本已支援）。 |\n\n---\n\n## 附錄：實際工時記錄（2026-11-19 回填）
 
 - 記錄時間：2026-11-19 10:10:28 HKT；依據使用者指示「更新之前 project 更新過的狀態，記錄實際工時」，經確認記錄位置為看板＋本時間綫，數字依 timeline 時間推算（方案 A，輪次級推算，commit 時間錨定）。
 - 看板落地：GitHub Project 1（my-deck checkin）新增 NUMBER 欄位「實際工時」（PVTF_lAHOAw-5Gc4Br8TPzhqgE5I），109 張 Done 卡片全部回填並驗證通過（2.4h×104、1.1h×3、2.86h×2）。同輪卡片同值，看板欄位加總僅作參考，不代表實際總工時；TASK-331/332 已被移至「非 MVP」欄，未回填。

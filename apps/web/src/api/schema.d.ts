@@ -257,6 +257,9 @@ export interface paths {
         /**
          * Join Course
          * @description 以課程碼加入課程；重複加入回傳原成員記錄（冪等）。
+         *
+         *     REQ-003 安全限制：對同一學生帳號及來源 IP 的頻繁無效課程碼嘗試限流；
+         *     限制期間一律回 429（不查詢課程，避免泄露課程資料），不建立任何成員記錄。
          */
         post: operations["join_course_api_v1_course_memberships_join_post"];
         delete?: never;

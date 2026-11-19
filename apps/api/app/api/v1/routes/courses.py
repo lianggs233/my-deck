@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
@@ -14,9 +16,10 @@ from app.api.deps import (
     TeacherUser,
     idempotency_manager,
 )
+from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.core.ids import new_course_code, new_id
-from app.db.models import Course, CourseMembership, User
+from app.db.models import Course, CourseJoinAttempt, CourseMembership, User
 from app.schemas.course import (
     CourseCreated,
     CourseCreateRequest,
@@ -170,15 +173,52 @@ async def join_course(
     db: DbDep,
     _: CsrfDep,
 ) -> JSONResponse:
-    """以課程碼加入課程；重複加入回傳原成員記錄（冪等）。"""
+    """以課程碼加入課程；重複加入回傳原成員記錄（冪等）。
+
+    REQ-003 安全限制：對同一學生帳號及來源 IP 的頻繁無效課程碼嘗試限流；
+    限制期間一律回 429（不查詢課程，避免泄露課程資料），不建立任何成員記錄。
+    """
+    settings = get_settings()
+    ip = request.client.host if request.client else "unknown"
+    now = datetime.now(UTC)
+    window_start = now - timedelta(minutes=settings.course_join_lock_minutes)
+
+    account_failures = (
+        await db.execute(
+            select(func.count(CourseJoinAttempt.id)).where(
+                CourseJoinAttempt.student_id == student.id,
+                CourseJoinAttempt.success.is_(False),
+                CourseJoinAttempt.created_at >= window_start,
+            )
+        )
+    ).scalar() or 0
+    ip_failures = (
+        await db.execute(
+            select(func.count(CourseJoinAttempt.id)).where(
+                CourseJoinAttempt.ip == ip,
+                CourseJoinAttempt.success.is_(False),
+                CourseJoinAttempt.created_at >= window_start,
+            )
+        )
+    ).scalar() or 0
+    if (
+        account_failures >= settings.course_join_max_failures
+        or ip_failures >= settings.course_join_ip_max_failures
+    ):
+        raise ApiError(429, "COURSE_JOIN_RATE_LIMITED", "嘗試次數過多，請稍後再試。")
+
     code = payload.code.strip().upper()
     if len(code) != 8:
+        db.add(CourseJoinAttempt(student_id=student.id, ip=ip, success=False))
+        await db.commit()
         raise ApiError(
             400, "COURSE_CODE_INVALID", "課程碼不正確。", fields={"code": "課程碼為 8 位字元。"}
         )
     result = await db.execute(select(Course).where(Course.code == code))
     course = result.scalar_one_or_none()
     if course is None:
+        db.add(CourseJoinAttempt(student_id=student.id, ip=ip, success=False))
+        await db.commit()
         raise ApiError(404, "COURSE_NOT_FOUND", "找不到此課程碼對應的課程。")
 
     existing = await db.execute(
@@ -194,6 +234,7 @@ async def join_course(
         db.add(membership)
         await db.flush()
         status_code = 201
+    db.add(CourseJoinAttempt(student_id=student.id, ip=ip, success=True))
     await db.commit()
     teacher = (await db.execute(select(User).where(User.id == course.teacher_id))).scalar_one()
     body = MembershipSummary(

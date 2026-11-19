@@ -69,6 +69,18 @@ class LoginAttempt(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class CourseJoinAttempt(Base):
+    """課程碼加入嘗試（REQ-003 無效嘗試限流：按學生帳號及來源 IP 計數）。"""
+
+    __tablename__ = "course_join_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[str] = mapped_column(String(40), index=True)
+    ip: Mapped[str] = mapped_column(String(64), index=True)
+    success: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class Course(Base):
     __tablename__ = "courses"
 

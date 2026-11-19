@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     login_max_failures: int = 5
     login_lock_minutes: int = 15
 
+    # 課程碼加入限流（REQ-003：對同一學生帳號及來源 IP 的無效嘗試可配置限流）。
+    course_join_max_failures: int = 10
+    course_join_ip_max_failures: int = 30
+    course_join_lock_minutes: int = 15
+
     # 上傳與轉換。
     upload_expiry_seconds: int = 600
     max_upload_bytes: int = 104_857_600

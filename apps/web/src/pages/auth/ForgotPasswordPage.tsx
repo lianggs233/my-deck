@@ -5,31 +5,31 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../auth/useAuth'
 import { AuthLayout } from '../../components/ui/AuthLayout'
+import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { IconBox } from '../../components/ui/IconBox'
 import { PasswordStrengthField } from '../../components/ui/PasswordStrengthField'
 
 /** PG-004 忘記密碼（本期以舊密碼驗證直接重設，不發驗證碼） */
 export function ForgotPasswordPage() {
   const { resetPasswordDirect } = useAuth()
+  const { showError } = useErrorAlert()
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
   const [oldPassword, setOldPassword] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
-    setError('')
     try {
       if (password.length < 8) throw new Error('新密碼需至少 8 個字元')
       if (password !== confirm) throw new Error('兩次輸入的新密碼不一致')
       await resetPasswordDirect(identifier, oldPassword, password)
       navigate('/login', { replace: true, state: { reset: true } })
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '重設密碼失敗')
+      showError(cause instanceof Error ? cause.message : '重設密碼失敗')
     } finally {
       setSubmitting(false)
     }
@@ -49,12 +49,6 @@ export function ForgotPasswordPage() {
             {'輸入帳號及目前使用的舊密碼，\n驗證通過後即可設定新密碼。'}
           </Text>
         </div>
-
-        {error ? (
-          <Text fz={16} c="#B42318" role="alert">
-            {error}
-          </Text>
-        ) : null}
 
         <form onSubmit={(event) => void submit(event)}>
           <Stack gap="lg">

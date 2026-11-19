@@ -10,17 +10,19 @@ import {
   Title,
   UnstyledButton,
 } from '@mantine/core'
-import { IconBook2, IconChevronDown, IconSchool } from '@tabler/icons-react'
+import { IconBook2, IconSchool } from '@tabler/icons-react'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../auth/useAuth'
 import { AuthLayout } from '../../components/ui/AuthLayout'
+import { ChannelTabs, type Channel } from '../../components/ui/ChannelTabs'
+import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { IconBox } from '../../components/ui/IconBox'
 import { PasswordStrengthField } from '../../components/ui/PasswordStrengthField'
+import { RegionCodeSelect } from '../../components/ui/RegionCodeSelect'
 import type { UserRole } from '../../types/domain'
-
-type Channel = 'PHONE' | 'EMAIL'
+import { normalizeHongKongPhone } from '../../utils/phone'
 
 const roleCards: { role: UserRole; icon: typeof IconSchool; name: string; description: string }[] =
   [
@@ -28,57 +30,35 @@ const roleCards: { role: UserRole; icon: typeof IconSchool; name: string; descri
     { role: 'STUDENT', icon: IconBook2, name: '學生', description: '加入及參與課堂' },
   ]
 
-const channelTabs: { value: Channel; label: string }[] = [
-  { value: 'PHONE', label: '手機號碼' },
-  { value: 'EMAIL', label: '電子郵件' },
-]
-
-/** 固定地區碼 +852；預留後續改為可選不同地區的選擇框（屆時換回 Select 元件） */
-export const REGION_CODE = '+852'
-
-export function RegionCodeSelect() {
-  return (
-    <Group gap={4} wrap="nowrap" pl={14} component="span" aria-label="地區號碼">
-      <Text component="span" fz={16} fw={600} c="#5D7184">
-        {REGION_CODE}
-      </Text>
-      <IconChevronDown size={16} color="#5D7184" aria-hidden />
-    </Group>
-  )
-}
-
 /** PG-002 註冊（選角色、填資料、免驗證碼直接註冊，成功後回登入頁） */
 export function RegisterPage() {
   const { register } = useAuth()
+  const { showError } = useErrorAlert()
   const navigate = useNavigate()
   const [role, setRole] = useState<UserRole>('TEACHER')
   const [channel, setChannel] = useState<Channel>('PHONE')
   const [identifier, setIdentifier] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
-    setError('')
     try {
       let submitIdentifier = identifier
       if (channel === 'PHONE') {
-        // 校驗僅針對本地號碼（不含「+」），容忍貼上時的空格／破折號／已含 852 前綴
-        const digits = identifier.replace(/\D/g, '')
-        const local = digits.startsWith('852') && digits.length === 11 ? digits.slice(3) : digits
-        if (!/^\d{8}$/.test(local)) {
-          setError('請輸入 8 位數手機號碼。')
+        const phone = normalizeHongKongPhone(identifier)
+        if (!phone) {
+          showError('請輸入 8 位數手機號碼。')
           return
         }
-        submitIdentifier = `${REGION_CODE}${local}`
+        submitIdentifier = phone
       }
       await register({ identifier: submitIdentifier, displayName, role, password })
       navigate('/login', { state: { registered: true } })
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '註冊失敗')
+      showError(cause instanceof Error ? cause.message : '註冊失敗')
     } finally {
       setSubmitting(false)
     }
@@ -98,12 +78,6 @@ export function RegisterPage() {
             只需幾步，即可加入你的第一個課堂。
           </Text>
         </div>
-
-        {error ? (
-          <Text fz={16} c="#B42318" role="alert">
-            {error}
-          </Text>
-        ) : null}
 
         <form onSubmit={(event) => void submit(event)}>
           <Stack gap="md">
@@ -151,36 +125,7 @@ export function RegisterPage() {
             </Box>
 
             {/* 頻道切換（分段控制） */}
-            <Group
-              gap={4}
-              p={4}
-              style={{ border: '1px solid #D8E2E8', borderRadius: 16, background: '#FFFFFF' }}
-              role="tablist"
-              aria-label="驗證方式"
-            >
-              {channelTabs.map((tab) => {
-                const selected = channel === tab.value
-                return (
-                  <UnstyledButton
-                    key={tab.value}
-                    type="button"
-                    role="tab"
-                    aria-selected={selected}
-                    onClick={() => setChannel(tab.value)}
-                    style={{
-                      flex: 1,
-                      height: 48,
-                      borderRadius: 12,
-                      background: selected ? '#DDF4EC' : 'transparent',
-                    }}
-                  >
-                    <Text ta="center" fz={16} fw={600} c={selected ? '#0B6455' : '#5D7184'}>
-                      {tab.label}
-                    </Text>
-                  </UnstyledButton>
-                )
-              })}
-            </Group>
+            <ChannelTabs value={channel} onChange={setChannel} ariaLabel="驗證方式" />
 
             <div>
               <Group justify="space-between" mb={8}>

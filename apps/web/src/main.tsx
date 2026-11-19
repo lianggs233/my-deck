@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 
 import App from './App'
+import { ErrorAlertProvider } from './components/ui/ErrorAlertProvider'
 import { theme } from './theme'
 
 const queryClient = new QueryClient({
@@ -25,9 +26,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme} defaultColorScheme="light">
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <ErrorAlertProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ErrorAlertProvider>
       </MantineProvider>
     </QueryClientProvider>
   </StrictMode>,

@@ -11,12 +11,13 @@ import {
 } from '@mantine/core'
 import { IconChevronRight, IconCircleCheck, IconFolderPlus } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { courseApi } from '../../api/mvp'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyStateCard } from '../../components/ui/EmptyStateCard'
+import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { HeroBanner } from '../../components/ui/HeroBanner'
 import { IconBox } from '../../components/ui/IconBox'
 import { SectionHeader } from '../../components/ui/SectionHeader'
@@ -26,10 +27,10 @@ import { StatusPill } from '../../components/ui/StatusPill'
 export function TeacherHomePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { showError } = useErrorAlert()
   const [createOpened, setCreateOpened] = useState(false)
   const [discardOpened, setDiscardOpened] = useState(false)
   const [name, setName] = useState('')
-  const [modalError, setModalError] = useState('')
 
   const coursesQuery = useQuery({
     queryKey: ['teacher-courses'],
@@ -41,13 +42,17 @@ export function TeacherHomePage() {
       closeModal()
       await queryClient.invalidateQueries({ queryKey: ['teacher-courses'] })
     },
-    onError: (cause) => setModalError(cause instanceof Error ? cause.message : '建立課程失敗'),
+    onError: (cause) => showError(cause instanceof Error ? cause.message : '建立課程失敗'),
   })
+
+  const coursesLoadError = coursesQuery.error
+  useEffect(() => {
+    if (coursesLoadError) showError('無法讀取課程，請確認登入狀態後重新整理。')
+  }, [coursesLoadError, showError])
 
   function closeModal() {
     setCreateOpened(false)
     setName('')
-    setModalError('')
   }
 
   function requestCloseModal() {
@@ -102,12 +107,6 @@ export function TeacherHomePage() {
         />
         <Stack gap="md" mt="lg">
           {coursesQuery.isPending ? <Loader aria-label="課程載入中" mx="auto" my="xl" /> : null}
-
-          {coursesQuery.isError ? (
-            <Text fz={16} c="#B42318" role="alert">
-              無法讀取課程，請確認登入狀態後重新整理。
-            </Text>
-          ) : null}
 
           {coursesQuery.isSuccess && courses.length === 0 ? (
             <EmptyStateCard
@@ -189,11 +188,6 @@ export function TeacherHomePage() {
               </Text>
             </Stack>
           </div>
-          {modalError ? (
-            <Text fz={16} c="#B42318" role="alert">
-              {modalError}
-            </Text>
-          ) : null}
           <Group grow>
             <Button
               variant="default"

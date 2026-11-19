@@ -4,18 +4,23 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../auth/useAuth'
 import { AuthLayout } from '../../components/ui/AuthLayout'
+import { ChannelTabs, type Channel } from '../../components/ui/ChannelTabs'
+import { useErrorAlert } from '../../components/ui/error-alert-context'
+import { RegionCodeSelect } from '../../components/ui/RegionCodeSelect'
 import { StatusPill } from '../../components/ui/StatusPill'
 import { homePath } from '../../utils/home-path'
+import { normalizeHongKongPhone } from '../../utils/phone'
 
-/** PG-001 登入 */
+/** PG-001 登入（手機號碼／電子郵件分段切換，鏡像註冊頁） */
 export function LoginPage() {
   const { login } = useAuth()
+  const { showError } = useErrorAlert()
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as { from?: string; registered?: boolean; reset?: boolean } | null
+  const [channel, setChannel] = useState<Channel>('PHONE')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const notice = state?.registered
     ? '註冊成功！請使用新帳號登入。'
@@ -26,12 +31,20 @@ export function LoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitting(true)
-    setError('')
     try {
-      const session = await login(identifier, password)
+      let submitIdentifier = identifier
+      if (channel === 'PHONE') {
+        const phone = normalizeHongKongPhone(identifier)
+        if (!phone) {
+          showError('請輸入 8 位數手機號碼。')
+          return
+        }
+        submitIdentifier = phone
+      }
+      const session = await login(submitIdentifier, password)
       navigate(state?.from ?? homePath(session.user.role), { replace: true })
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '登入失敗')
+      showError(cause instanceof Error ? cause.message : '登入失敗')
     } finally {
       setSubmitting(false)
     }
@@ -59,21 +72,30 @@ export function LoginPage() {
           </Text>
         ) : null}
 
-        {error ? (
-          <Text fz={16} c="#B42318" role="alert">
-            {error}
-          </Text>
-        ) : null}
-
         <form onSubmit={(event) => void handleSubmit(event)}>
           <Stack gap="lg">
-            <TextInput
-              label="手機號碼或電郵"
-              placeholder="+852 9123 4567"
-              value={identifier}
-              onChange={(event) => setIdentifier(event.currentTarget.value)}
-              required
-            />
+            <ChannelTabs value={channel} onChange={setChannel} ariaLabel="登入方式" />
+            {channel === 'PHONE' ? (
+              <TextInput
+                label="手機號碼"
+                placeholder="9123 4567"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.currentTarget.value)}
+                leftSection={<RegionCodeSelect />}
+                leftSectionWidth={78}
+                styles={{ input: { paddingLeft: 86 } }}
+                inputMode="numeric"
+                required
+              />
+            ) : (
+              <TextInput
+                label="電子郵件"
+                placeholder="name@example.com"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.currentTarget.value)}
+                required
+              />
+            )}
             <div>
               <PasswordInput
                 label="密碼"

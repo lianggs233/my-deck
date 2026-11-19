@@ -1,9 +1,11 @@
 import { Loader, Paper, Stack, Tabs, Text } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { courseApi, coursewareApi } from '../../api/mvp'
 import { CoursewareRow } from '../../components/ui/CoursewareRow'
+import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { PageHeading } from '../../components/ui/PageHeading'
 
 /**
@@ -24,16 +26,23 @@ export function StudentCoursePage() {
     enabled: Boolean(courseId),
   })
 
+  const { showError } = useErrorAlert()
+  const courseLoadError = courseQuery.error
+  useEffect(() => {
+    if (courseLoadError) {
+      showError(
+        courseLoadError instanceof Error ? courseLoadError.message : '課程不存在或你沒有權限查看。',
+      )
+    }
+  }, [courseLoadError, showError])
+
   if (courseQuery.isPending || coursewareQuery.isPending) {
     return <Loader aria-label="課程資料載入中" mx="auto" my="xl" />
   }
 
   if (!courseQuery.data) {
-    return (
-      <Text fz={16} c="#B42318" role="alert">
-        課程不存在或你沒有權限查看。
-      </Text>
-    )
+    // 錯誤已統一由頂部 Alert 顯示（見上方 useEffect）
+    return null
   }
 
   const course = courseQuery.data

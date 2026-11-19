@@ -18,10 +18,11 @@ import {
   IconPresentation,
 } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { annotationApi, coursewareApi } from '../../api/mvp'
+import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { SlideCanvas } from '../../components/ui/SlideCanvas'
 import { StatusPill } from '../../components/ui/StatusPill'
 import type { Annotation, AnnotationPosition } from '../../types/domain'
@@ -110,12 +111,25 @@ export function StudentCoursewarePreviewPage() {
   })
 
   const submitting = createMutation.isPending || updateMutation.isPending
-  const mutationError =
-    createMutation.error instanceof Error
-      ? createMutation.error.message
-      : updateMutation.error instanceof Error
-        ? updateMutation.error.message
-        : ''
+  const mutationError = createMutation.error ?? updateMutation.error
+
+  const { showError } = useErrorAlert()
+  useEffect(() => {
+    if (mutationError) {
+      showError(mutationError instanceof Error ? mutationError.message : '保存標註失敗')
+    }
+  }, [mutationError, showError])
+
+  const coursewareLoadError = coursewareQuery.error
+  useEffect(() => {
+    if (coursewareLoadError) {
+      showError(
+        coursewareLoadError instanceof Error
+          ? coursewareLoadError.message
+          : '課件不存在或你沒有權限查看。',
+      )
+    }
+  }, [coursewareLoadError, showError])
 
   function closeEditor() {
     setEditorOpen(false)
@@ -155,11 +169,8 @@ export function StudentCoursewarePreviewPage() {
   }
 
   if (!coursewareQuery.data) {
-    return (
-      <Text fz={16} c="#B42318" role="alert">
-        課件不存在或你沒有權限查看。
-      </Text>
-    )
+    // 錯誤已統一由頂部 Alert 顯示（見上方 useEffect）
+    return null
   }
 
   const courseware = coursewareQuery.data
@@ -285,11 +296,6 @@ export function StudentCoursewarePreviewPage() {
               個人內容不會顯示給老師或其他學生
             </Text>
           </div>
-          {mutationError ? (
-            <Text fz={16} c="#B42318" role="alert">
-              {mutationError}
-            </Text>
-          ) : null}
           <Group grow>
             <Button variant="default" styles={secondaryButton} onClick={closeEditor}>
               取消

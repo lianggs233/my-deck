@@ -11,11 +11,12 @@ import {
 } from '@mantine/core'
 import { IconBook2, IconChevronRight, IconCircleCheck, IconPlus } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { courseApi } from '../../api/mvp'
 import { EmptyStateCard } from '../../components/ui/EmptyStateCard'
+import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { HeroBanner } from '../../components/ui/HeroBanner'
 import { IconBox } from '../../components/ui/IconBox'
 import { SectionHeader } from '../../components/ui/SectionHeader'
@@ -25,9 +26,9 @@ import { StatusPill } from '../../components/ui/StatusPill'
 export function StudentHomePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { showError } = useErrorAlert()
   const [joinOpened, setJoinOpened] = useState(false)
   const [code, setCode] = useState('')
-  const [modalError, setModalError] = useState('')
 
   const membershipsQuery = useQuery({
     queryKey: ['student-memberships'],
@@ -38,11 +39,15 @@ export function StudentHomePage() {
     onSuccess: async () => {
       setJoinOpened(false)
       setCode('')
-      setModalError('')
       await queryClient.invalidateQueries({ queryKey: ['student-memberships'] })
     },
-    onError: (cause) => setModalError(cause instanceof Error ? cause.message : '加入課程失敗'),
+    onError: (cause) => showError(cause instanceof Error ? cause.message : '加入課程失敗'),
   })
+
+  const membershipsLoadError = membershipsQuery.error
+  useEffect(() => {
+    if (membershipsLoadError) showError('無法讀取課程，請確認登入狀態後重新整理。')
+  }, [membershipsLoadError, showError])
 
   const memberships = membershipsQuery.data?.items ?? []
 
@@ -89,12 +94,6 @@ export function StudentHomePage() {
         />
         <Stack gap="md" mt="lg">
           {membershipsQuery.isPending ? <Loader aria-label="課程載入中" mx="auto" my="xl" /> : null}
-
-          {membershipsQuery.isError ? (
-            <Text fz={16} c="#B42318" role="alert">
-              無法讀取課程，請確認登入狀態後重新整理。
-            </Text>
-          ) : null}
 
           {membershipsQuery.isSuccess && memberships.length === 0 ? (
             <EmptyStateCard
@@ -144,7 +143,6 @@ export function StudentHomePage() {
         onClose={() => {
           setJoinOpened(false)
           setCode('')
-          setModalError('')
         }}
         withCloseButton={false}
         centered
@@ -176,11 +174,6 @@ export function StudentHomePage() {
               </Text>
             </Stack>
           </div>
-          {modalError ? (
-            <Text fz={16} c="#B42318" role="alert">
-              {modalError}
-            </Text>
-          ) : null}
           <Group grow>
             <Button
               variant="default"
@@ -190,7 +183,6 @@ export function StudentHomePage() {
               onClick={() => {
                 setJoinOpened(false)
                 setCode('')
-                setModalError('')
               }}
               disabled={joinMutation.isPending}
             >

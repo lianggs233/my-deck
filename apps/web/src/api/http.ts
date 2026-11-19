@@ -1,4 +1,5 @@
 import type { ApiFailure } from '../types/domain'
+import { collectError } from '../utils/error-collector'
 
 /**
  * API HTTP 基礎層：Session Cookie（credentials）＋ CSRF double-submit。
@@ -45,11 +46,19 @@ async function ensureCsrfToken(): Promise<string> {
 
 function toApiError(status: number, body: unknown): ApiError {
   const failure = (body as { error?: ApiFailure } | null)?.error
-  if (failure?.code) return new ApiError(status, failure)
-  return new ApiError(status, {
-    code: status >= 500 ? 'SERVER_ERROR' : 'REQUEST_FAILED',
-    message: status >= 500 ? '伺服器暫時未能處理，請稍後再試。' : '請求失敗，請稍後再試。',
+  const error = failure?.code
+    ? new ApiError(status, failure)
+    : new ApiError(status, {
+        code: status >= 500 ? 'SERVER_ERROR' : 'REQUEST_FAILED',
+        message: status >= 500 ? '伺服器暫時未能處理，請稍後再試。' : '請求失敗，請稍後再試。',
+      })
+  // 錯誤收集器（僅開發模式輸出）
+  collectError('api', error.message, {
+    status: error.status,
+    code: error.code,
+    requestId: error.requestId,
   })
+  return error
 }
 
 interface ApiFetchOptions {

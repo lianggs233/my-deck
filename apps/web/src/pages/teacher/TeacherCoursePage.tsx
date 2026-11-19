@@ -14,11 +14,12 @@ import {
 } from '@mantine/core'
 import { IconCloudUpload, IconCopy, IconFile, IconFolder } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { courseApi, coursewareApi } from '../../api/mvp'
 import { CoursewareRow } from '../../components/ui/CoursewareRow'
+import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { PageHeading } from '../../components/ui/PageHeading'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 
@@ -31,11 +32,11 @@ function formatSize(bytes: number) {
 export function TeacherCoursePage() {
   const { courseId = '' } = useParams()
   const queryClient = useQueryClient()
+  const { showError } = useErrorAlert()
   const [uploadOpened, setUploadOpened] = useState(false)
   const [cancelOpened, setCancelOpened] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const courseQuery = useQuery({
@@ -61,20 +62,27 @@ export function TeacherCoursePage() {
     },
     onError: (cause) => {
       setUploading(false)
-      setUploadError(cause instanceof Error ? cause.message : '上傳失敗，請稍後再試')
+      showError(cause instanceof Error ? cause.message : '上傳失敗，請稍後再試')
     },
   })
+
+  const courseLoadError = courseQuery.error
+  useEffect(() => {
+    if (courseLoadError) {
+      showError(
+        courseLoadError instanceof Error ? courseLoadError.message : '課程不存在或你沒有權限查看。',
+      )
+    }
+  }, [courseLoadError, showError])
 
   function closeUpload() {
     setUploadOpened(false)
     setFile(null)
     setUploading(false)
-    setUploadError('')
   }
 
   function startUpload() {
     if (!file) return
-    setUploadError('')
     setUploading(true)
     uploadMutation.mutate(file)
   }
@@ -92,11 +100,8 @@ export function TeacherCoursePage() {
   }
 
   if (!courseQuery.data) {
-    return (
-      <Text fz={16} c="#B42318" role="alert">
-        課程不存在或你沒有權限查看。
-      </Text>
-    )
+    // 錯誤已統一由頂部 Alert 顯示（見上方 useEffect）
+    return null
   }
 
   const course = courseQuery.data
@@ -290,12 +295,6 @@ export function TeacherCoursePage() {
                 上傳完成後會自動開始轉換
               </Text>
             </Stack>
-          ) : null}
-
-          {uploadError ? (
-            <Text fz={16} c="#B42318" role="alert">
-              {uploadError}
-            </Text>
           ) : null}
 
           <Group grow>

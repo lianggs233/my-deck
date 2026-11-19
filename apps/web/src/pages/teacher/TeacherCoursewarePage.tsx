@@ -1,10 +1,12 @@
 import { Button, Group, Loader, Paper, Stack, Text } from '@mantine/core'
 import { IconArrowLeft, IconPresentation } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { coursewareApi } from '../../api/mvp'
 import { CoursewareStatusPill } from '../../components/ui/CoursewareStatusPill'
+import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { PageHeading } from '../../components/ui/PageHeading'
 import { SectionHeader } from '../../components/ui/SectionHeader'
 import { SlideCanvas } from '../../components/ui/SlideCanvas'
@@ -42,16 +44,25 @@ export function TeacherCoursewarePage() {
     },
   })
 
+  const { showError } = useErrorAlert()
+  const coursewareLoadError = coursewareQuery.error
+  useEffect(() => {
+    if (coursewareLoadError) {
+      showError(
+        coursewareLoadError instanceof Error
+          ? coursewareLoadError.message
+          : '課件不存在或你沒有權限查看。',
+      )
+    }
+  }, [coursewareLoadError, showError])
+
   if (coursewareQuery.isPending) {
     return <Loader aria-label="課件載入中" mx="auto" my="xl" />
   }
 
   if (!coursewareQuery.data) {
-    return (
-      <Text fz={16} c="#B42318" role="alert">
-        課件不存在或你沒有權限查看。
-      </Text>
-    )
+    // 錯誤已統一由頂部 Alert 顯示（見上方 useEffect）
+    return null
   }
 
   const courseware = coursewareQuery.data

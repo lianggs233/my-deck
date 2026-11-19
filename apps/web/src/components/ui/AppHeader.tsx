@@ -26,7 +26,12 @@ export function AppHeader() {
   if (!user) return null
 
   return (
-    <Box component="header" bg="#FFFFFF" h={96} style={{ display: 'flex', alignItems: 'center' }}>
+    <Box
+      component="header"
+      bg="#FFFFFF"
+      h={96}
+      style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}
+    >
       <Group justify="space-between" w="100%" px={48} wrap="nowrap">
         <UnstyledButton onClick={() => navigate(homePath(user.role))} aria-label="回到首頁">
           <BrandMark variant="light" />

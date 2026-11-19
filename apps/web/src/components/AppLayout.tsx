@@ -29,10 +29,17 @@ export function AppLayout() {
   if (!user) return <Navigate to="/login" replace />
 
   return (
-    <Box component="main" mih="100vh" bg="#F5F8F6">
+    <Box
+      component="main"
+      className="md-viewport"
+      bg="#F5F8F6"
+      style={{ display: 'flex', flexDirection: 'column' }}
+    >
       <AppHeader />
-      <Box component="div" className="md-container" py={48}>
-        <Outlet />
+      <Box component="div" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <Box className="md-container" py={48}>
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   )

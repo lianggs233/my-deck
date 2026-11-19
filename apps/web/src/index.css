@@ -62,6 +62,13 @@ a:hover {
   padding-inline: 1rem;
 }
 
+/* 全螢幕版式外殼：主頁面（視窗）不出現滾動條，只在內容區內滾動 */
+.md-viewport {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 /* 短螢幕（高度 < 864px）隱藏認證頁左欄裝飾預覽卡，避免頁面溢出出現滾動條 */
 @media (height <= 54rem) {
   .md-auth-preview {

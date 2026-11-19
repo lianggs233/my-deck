@@ -18,15 +18,15 @@ interface AuthLayoutProps {
  */
 export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
   return (
-    <Box component="main" mih="100vh" style={{ display: 'flex' }}>
+    <Box component="main" className="md-viewport" style={{ display: 'flex' }}>
       <Box
         component="aside"
         bg="#17324D"
-        mih="100vh"
+        h="100%"
         w="clamp(400px, 42vw, 600px)"
         px={48}
         py="clamp(16px, 4vh, 48px)"
-        style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}
+        style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}
         visibleFrom="md"
       >
         <BrandMark />
@@ -110,7 +110,14 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
         component="section"
         flex={1}
         bg="#F5F8F6"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}
+        h="100%"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          minHeight: 0,
+          overflowY: 'auto',
+        }}
         px="md"
       >
         <Paper
@@ -120,6 +127,7 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
           px="clamp(24px, 5vw, 64px)"
           py="clamp(20px, 3.5vh, 64px)"
           maw="100%"
+          m="auto"
         >
           <Box maw={512} mx="auto">
             {children}

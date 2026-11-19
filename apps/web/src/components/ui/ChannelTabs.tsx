@@ -7,7 +7,7 @@ const channelTabs: { value: Channel; label: string }[] = [
   { value: 'EMAIL', label: '電子郵件' },
 ]
 
-/** 手機號碼／電子郵件分段切換（登入 PG-001、註冊 PG-002 共用） */
+/** 手機號碼／電子郵件分段切換（登入 PG-001、註冊 PG-002、忘記密碼 PG-004 共用） */
 export function ChannelTabs({
   value,
   onChange,

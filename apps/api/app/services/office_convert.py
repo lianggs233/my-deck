@@ -11,6 +11,7 @@ import asyncio
 import io
 import subprocess
 import tempfile
+import weakref
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -20,6 +21,24 @@ FULL_LONG_EDGE = 1920
 THUMB_LONG_EDGE = 320
 # 150 DPI：16:9 簡報約渲染成 2000×1125，再縮到長邊 1920。
 RENDER_DPI = 150
+# 同一時間只允許一個 LibreOffice 轉換：soffice 進程佔用大量記憶體，
+# 低記憶體主機同時啟動多個會導致系統被 OOM 終止。
+MAX_CONCURRENT_CONVERSIONS = 1
+
+# 每個事件迴圈各自持有信號量，避免跨 loop 綁定錯誤（測試會建立多個 loop）。
+_semaphores: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore] = (
+    weakref.WeakKeyDictionary()
+)
+
+
+def _conversion_semaphore() -> asyncio.Semaphore:
+    """取得目前事件迴圈的轉換信號量。"""
+    loop = asyncio.get_running_loop()
+    semaphore = _semaphores.get(loop)
+    if semaphore is None:
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_CONVERSIONS)
+        _semaphores[loop] = semaphore
+    return semaphore
 
 
 @dataclass
@@ -52,13 +71,14 @@ async def render_office_pages(
     timeout_seconds: int,
 ) -> list[RenderedPage]:
     """把簡報原檔渲染成逐頁 WebP（在執行緒中執行外部程序）。"""
-    return await asyncio.to_thread(
-        _render_office_pages_sync,
-        original,
-        file_name,
-        soffice_bin=soffice_bin,
-        timeout_seconds=timeout_seconds,
-    )
+    async with _conversion_semaphore():
+        return await asyncio.to_thread(
+            _render_office_pages_sync,
+            original,
+            file_name,
+            soffice_bin=soffice_bin,
+            timeout_seconds=timeout_seconds,
+        )
 
 
 def _render_office_pages_sync(

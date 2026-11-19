@@ -3,6 +3,10 @@ import { apiFetch, apiPutRaw, sha256Hex } from './http'
 import type {
   Annotation,
   AuthSession,
+  Classroom,
+  ClassroomDetail,
+  ClassroomJoinInfo,
+  ClassroomPageState,
   ConversionAttempt,
   Course,
   CourseDetail,
@@ -12,6 +16,7 @@ import type {
   CoursewarePage,
   CreateAnnotationRequest,
   Page,
+  PageDirection,
   RegisterRequest,
   RegistrationChallenge,
   UpdateAnnotationRequest,
@@ -35,6 +40,11 @@ type ApiPreviewPage = Schemas['PreviewPage']
 type ApiAttempt = Schemas['ConversionAttemptItem']
 type ApiAnnotation = Schemas['AnnotationItem']
 type ApiRegisterStart = Schemas['RegisterStartResponse']
+type ApiClassroomSummary = Schemas['ClassroomSummary']
+type ApiClassroomStartResponse = Schemas['ClassroomStartResponse']
+type ApiClassroomDetailResponse = Schemas['ClassroomDetailResponse']
+type ApiJoinInfo = Schemas['JoinInfo']
+type ApiPageState = Schemas['PageStateResponse']
 
 function toUser(user: ApiUser): User {
   return { id: user.id, displayName: user.displayName, role: user.role as UserRole }
@@ -322,6 +332,74 @@ export const coursewareApi = {
     await apiFetch(`/courses/${courseId}/coursewares/${coursewareId}/conversion-attempts`, {
       method: 'POST',
     })
+  },
+}
+
+function toClassroom(classroom: ApiClassroomSummary): Classroom {
+  return {
+    id: classroom.id,
+    courseId: classroom.courseId,
+    coursewareId: classroom.coursewareId,
+    coursewareVersion: classroom.coursewareVersion,
+    name: classroom.name,
+    code: classroom.code ?? undefined,
+    status: classroom.status as Classroom['status'],
+    pageIndex: classroom.pageIndex,
+    pageCount: classroom.pageCount,
+    stateVersion: classroom.stateVersion,
+    startedAt: classroom.startedAt,
+  }
+}
+
+function toJoinInfo(joinInfo: ApiJoinInfo): ClassroomJoinInfo {
+  return { code: joinInfo.code, joinUrl: joinInfo.joinUrl, canCopy: joinInfo.canCopy }
+}
+
+export const classroomApi = {
+  /** 開始授課：建立進行中課堂並回傳課堂碼／加入連結 */
+  async start(
+    courseId: string,
+    coursewareId: string,
+    name: string,
+  ): Promise<{ classroom: Classroom; joinInfo: ClassroomJoinInfo }> {
+    const data = await apiFetch<ApiClassroomStartResponse>(`/courses/${courseId}/classrooms`, {
+      method: 'POST',
+      body: { coursewareId, name },
+    })
+    return { classroom: toClassroom(data.classroom), joinInfo: toJoinInfo(data.joinInfo) }
+  },
+
+  async get(courseId: string, classroomId: string): Promise<ClassroomDetail> {
+    const data = await apiFetch<ApiClassroomDetailResponse>(
+      `/courses/${courseId}/classrooms/${classroomId}`,
+    )
+    return { classroom: toClassroom(data.classroom), courseName: data.courseName }
+  },
+
+  /** 加入資訊（課堂碼＋加入連結）：僅負責老師可讀 */
+  async joinInfo(classroomId: string): Promise<ClassroomJoinInfo> {
+    const data = await apiFetch<{ joinInfo: ApiJoinInfo; classroomStatus: string }>(
+      `/classrooms/${classroomId}/join-info`,
+    )
+    return toJoinInfo(data.joinInfo)
+  },
+
+  /** 翻頁：帶 expectedStateVersion，亂序請求回 409 */
+  async turnPage(
+    classroomId: string,
+    direction: PageDirection,
+    expectedStateVersion: number,
+    pageIndex?: number,
+  ): Promise<ClassroomPageState> {
+    const data = await apiFetch<ApiPageState>(`/classrooms/${classroomId}/pages`, {
+      method: 'POST',
+      body: { direction, expectedStateVersion, pageIndex: pageIndex ?? null },
+    })
+    return {
+      pageIndex: data.pageIndex,
+      pageCount: data.pageCount,
+      stateVersion: data.stateVersion,
+    }
   },
 }
 

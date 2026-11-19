@@ -12,6 +12,7 @@ import { StatusPage } from './pages/StatusPage'
 import { StudentCoursePage } from './pages/student/StudentCoursePage'
 import { StudentCoursewarePreviewPage } from './pages/student/StudentCoursewarePreviewPage'
 import { StudentHomePage } from './pages/student/StudentHomePage'
+import { TeacherClassroomPage } from './pages/teacher/TeacherClassroomPage'
 import { TeacherCoursePage } from './pages/teacher/TeacherCoursePage'
 import { TeacherCoursewarePage } from './pages/teacher/TeacherCoursewarePage'
 import { TeacherCoursewarePreviewPage } from './pages/teacher/TeacherCoursewarePreviewPage'
@@ -51,6 +52,10 @@ export default function App() {
           <Route
             path="/teacher/courses/:courseId/courseware/:coursewareId/preview"
             element={<TeacherCoursewarePreviewPage />}
+          />
+          <Route
+            path="/teacher/courses/:courseId/classrooms/:classroomId"
+            element={<TeacherClassroomPage />}
           />
         </Route>
 

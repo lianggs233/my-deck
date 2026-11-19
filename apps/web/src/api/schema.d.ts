@@ -463,6 +463,74 @@ export interface paths {
         patch: operations["update_annotation_api_v1_courses__course_id__coursewares__courseware_id__annotations__annotation_id__patch"];
         trace?: never;
     };
+    "/api/v1/courses/{course_id}/classrooms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Classroom */
+        post: operations["start_classroom_api_v1_courses__course_id__classrooms_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/classrooms/{classroom_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Classroom */
+        get: operations["get_classroom_api_v1_courses__course_id__classrooms__classroom_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/join-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Join Info */
+        get: operations["get_join_info_api_v1_classrooms__classroom_id__join_info_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn Page */
+        post: operations["turn_page_api_v1_classrooms__classroom_id__pages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -525,6 +593,56 @@ export interface components {
         /** AuthUserResponse */
         AuthUserResponse: {
             user: components["schemas"]["UserPublic"];
+        };
+        /** ClassroomDetailResponse */
+        ClassroomDetailResponse: {
+            classroom: components["schemas"]["ClassroomSummary"];
+            /** Coursename */
+            courseName: string;
+        };
+        /** ClassroomStartRequest */
+        ClassroomStartRequest: {
+            /** Coursewareid */
+            coursewareId: string;
+            /** Name */
+            name?: string | null;
+        };
+        /** ClassroomStartResponse */
+        ClassroomStartResponse: {
+            classroom: components["schemas"]["ClassroomSummary"];
+            joinInfo: components["schemas"]["JoinInfo"];
+        };
+        /** ClassroomSummary */
+        ClassroomSummary: {
+            /** Id */
+            id: string;
+            /** Courseid */
+            courseId: string;
+            /** Coursewareid */
+            coursewareId: string;
+            /** Coursewareversion */
+            coursewareVersion: number;
+            /** Teacherid */
+            teacherId: string;
+            /** Name */
+            name: string;
+            /** Code */
+            code?: string | null;
+            /** Status */
+            status: string;
+            /** Pageindex */
+            pageIndex: number;
+            /** Pagecount */
+            pageCount: number;
+            /** Stateversion */
+            stateVersion: number;
+            /**
+             * Startedat
+             * Format: date-time
+             */
+            startedAt: string;
+            /** Endedat */
+            endedAt?: string | null;
         };
         /** ConversionAttemptItem */
         ConversionAttemptItem: {
@@ -731,6 +849,21 @@ export interface components {
             /** Code */
             code: string;
         };
+        /** JoinInfo */
+        JoinInfo: {
+            /** Code */
+            code: string;
+            /** Joinurl */
+            joinUrl: string;
+            /** Cancopy */
+            canCopy: boolean;
+        };
+        /** JoinInfoResponse */
+        JoinInfoResponse: {
+            joinInfo: components["schemas"]["JoinInfo"];
+            /** Classroomstatus */
+            classroomStatus: string;
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Identifier */
@@ -761,6 +894,29 @@ export interface components {
             course: components["schemas"]["CourseSummary"];
             /** Teachername */
             teacherName: string;
+        };
+        /** PageStateResponse */
+        PageStateResponse: {
+            /** Classroomid */
+            classroomId: string;
+            /** Pageindex */
+            pageIndex: number;
+            /** Pagecount */
+            pageCount: number;
+            /** Stateversion */
+            stateVersion: number;
+        };
+        /** PageTurnRequest */
+        PageTurnRequest: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "NEXT" | "PREV" | "GOTO";
+            /** Pageindex */
+            pageIndex?: number | null;
+            /** Expectedstateversion */
+            expectedStateVersion: number;
         };
         /** PasswordResetCompleteRequest */
         PasswordResetCompleteRequest: {
@@ -1770,6 +1926,139 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_classroom_api_v1_courses__course_id__classrooms_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassroomStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassroomStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_classroom_api_v1_courses__course_id__classrooms__classroom_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: string;
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassroomDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_join_info_api_v1_classrooms__classroom_id__join_info_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinInfoResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    turn_page_api_v1_classrooms__classroom_id__pages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageTurnRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageStateResponse"];
                 };
             };
             /** @description Validation Error */

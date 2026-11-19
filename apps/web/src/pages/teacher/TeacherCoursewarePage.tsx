@@ -1,10 +1,11 @@
-import { Button, Group, Loader, Paper, Stack, Text } from '@mantine/core'
-import { IconArrowLeft, IconPresentation } from '@tabler/icons-react'
+import { Button, Group, Loader, Modal, Paper, Stack, Text, TextInput, Title } from '@mantine/core'
+import { IconArrowLeft, IconPlayerPlay, IconPresentation } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
-import { coursewareApi } from '../../api/mvp'
+import { ApiError } from '../../api/http'
+import { classroomApi, coursewareApi } from '../../api/mvp'
 import { CoursewareStatusPill } from '../../components/ui/CoursewareStatusPill'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { PageHeading } from '../../components/ui/PageHeading'
@@ -27,6 +28,9 @@ const secondaryButton = {
 /** PG-013 老師課件詳情（轉換資訊 + 封面預覽 + 嘗試歷史） */
 export function TeacherCoursewarePage() {
   const { courseId = '', coursewareId = '' } = useParams()
+  const navigate = useNavigate()
+  const [startOpened, setStartOpened] = useState(false)
+  const [classroomName, setClassroomName] = useState('')
 
   const queryClient = useQueryClient()
   const coursewareQuery = useQuery({
@@ -45,6 +49,23 @@ export function TeacherCoursewarePage() {
   })
 
   const { showError } = useErrorAlert()
+  const startMutation = useMutation({
+    mutationFn: (name: string) => classroomApi.start(courseId, coursewareId, name),
+    onSuccess: ({ classroom }) => {
+      setStartOpened(false)
+      navigate(`/teacher/courses/${courseId}/classrooms/${classroom.id}`)
+    },
+    onError: (cause) => {
+      showError(cause instanceof Error ? cause.message : '開始授課失敗')
+      // 同課程∕同老師已有進行中課堂：直接帶到該課堂（Alert 會說明原因）
+      const currentClassroomId =
+        cause instanceof ApiError ? cause.fields?.currentClassroomId : undefined
+      if (currentClassroomId) {
+        setStartOpened(false)
+        navigate(`/teacher/courses/${courseId}/classrooms/${currentClassroomId}`)
+      }
+    },
+  })
   const coursewareLoadError = coursewareQuery.error
   useEffect(() => {
     if (coursewareLoadError) {
@@ -94,7 +115,19 @@ export function TeacherCoursewarePage() {
           >
             逐頁預覽
           </Button>
-          <Button disabled title="即時授課功能將於後續版本推出">
+          <Button
+            leftSection={<IconPlayerPlay size={16} aria-hidden />}
+            disabled={!['READY', 'READY_WITH_WARNINGS'].includes(courseware.status)}
+            title={
+              ['READY', 'READY_WITH_WARNINGS'].includes(courseware.status)
+                ? undefined
+                : '課件轉換完成後才可開始授課'
+            }
+            onClick={() => {
+              setClassroomName(courseware.fileName.replace(/\.[^.]+$/, ''))
+              setStartOpened(true)
+            }}
+          >
             開始授課
           </Button>
         </Group>
@@ -216,6 +249,50 @@ export function TeacherCoursewarePage() {
           ))}
         </Stack>
       </section>
+
+      <Modal
+        opened={startOpened}
+        onClose={() => {
+          if (!startMutation.isPending) setStartOpened(false)
+        }}
+        withCloseButton={false}
+        centered
+        size={520}
+      >
+        <Stack gap="lg">
+          <Title order={3} fz={24} c="#17324D">
+            開始授課
+          </Title>
+          <Text fz={16} c="#5D7184">
+            建立後會生成 6 位課堂碼，學生輸入課堂碼即可加入。同一課程同時只會有一個進行中的課堂。
+          </Text>
+          <TextInput
+            label="課堂名稱"
+            placeholder="例如：第三章 光合作用"
+            value={classroomName}
+            onChange={(event) => setClassroomName(event.currentTarget.value)}
+            maxLength={50}
+            required
+          />
+          <Group grow>
+            <Button
+              variant="default"
+              styles={secondaryButton}
+              onClick={() => setStartOpened(false)}
+              disabled={startMutation.isPending}
+            >
+              取消
+            </Button>
+            <Button
+              loading={startMutation.isPending}
+              disabled={!classroomName.trim()}
+              onClick={() => startMutation.mutate(classroomName.trim())}
+            >
+              開始授課
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Stack>
   )
 }

@@ -126,3 +126,38 @@ export interface UpdateAnnotationRequest {
   position?: AnnotationPosition
   expectedVersion: number
 }
+
+export type ClassroomStatus = 'LIVE' | 'ENDED'
+export type PageDirection = 'NEXT' | 'PREV' | 'GOTO'
+
+export interface Classroom {
+  id: string
+  courseId: string
+  coursewareId: string
+  coursewareVersion: number
+  name: string
+  /** 課堂碼僅負責老師可見（6 位大寫字母＋數字） */
+  code?: string
+  status: ClassroomStatus
+  pageIndex: number
+  pageCount: number
+  stateVersion: number
+  startedAt: string
+}
+
+export interface ClassroomJoinInfo {
+  code: string
+  joinUrl: string
+  canCopy: boolean
+}
+
+export interface ClassroomDetail {
+  classroom: Classroom
+  courseName: string
+}
+
+export interface ClassroomPageState {
+  pageIndex: number
+  pageCount: number
+  stateVersion: number
+}

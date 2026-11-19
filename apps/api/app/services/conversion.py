@@ -6,7 +6,7 @@ from datetime import UTC, timedelta
 
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -186,6 +186,10 @@ async def run_conversion(courseware_id: str, attempt_no: int) -> None:
                     await db.commit()
                 return
 
+            # 轉換會重建整份頁面：先清掉任何殘留頁面，避免重試時撞唯一鍵
+            await db.execute(
+                delete(CoursewarePage).where(CoursewarePage.courseware_id == courseware.id)
+            )
             db.add_all(pages)
             courseware.status = final_status
             courseware.page_count = total
@@ -198,35 +202,51 @@ async def run_conversion(courseware_id: str, attempt_no: int) -> None:
                 attempt.finished_at = utcnow()
             await db.commit()
         except _UnsupportedFormat as error:
-            await _fail(db, courseware, attempt, "UNSUPPORTED_FORMAT", str(error))
+            await _fail(db, courseware.id, attempt_no, "UNSUPPORTED_FORMAT", str(error))
         except _TooManyPages as error:
-            await _fail(db, courseware, attempt, "TOO_MANY_PAGES", str(error))
+            await _fail(db, courseware.id, attempt_no, "TOO_MANY_PAGES", str(error))
         except OfficeConversionError as error:
-            await _fail(db, courseware, attempt, "CONVERSION_FAILED", str(error))
+            await _fail(db, courseware.id, attempt_no, "CONVERSION_FAILED", str(error))
         except Exception as error:  # noqa: BLE001
-            await _fail(db, courseware, attempt, "CONVERSION_FAILED", f"轉換失敗：{error}")
+            await _fail(db, courseware.id, attempt_no, "CONVERSION_FAILED", f"轉換失敗：{error}")
 
 
 async def _fail(
     db: AsyncSession,
-    courseware: Courseware,
-    attempt: ConversionAttempt | None,
+    courseware_id: str,
+    attempt_no: int | None,
     code: str,
     message: str,
 ) -> None:
+    # 交易可能因 flush 衝突（如頁面唯一鍵）而中毒：先回滾再以 id 重新查詢。
+    await db.rollback()
+    result = await db.execute(select(Courseware).where(Courseware.id == courseware_id))
+    courseware = result.scalar_one_or_none()
     # 舊回調防護：只有最新嘗試的失敗可以改寫課件狀態。
-    if courseware.status == "CONVERTING" and await _is_latest_attempt(
-        db, courseware.id, attempt.attempt_no if attempt is not None else -1
+    if (
+        courseware is not None
+        and courseware.status == "CONVERTING"
+        and await _is_latest_attempt(
+            db, courseware_id, attempt_no if attempt_no is not None else -1
+        )
     ):
         courseware.status = "FAILED"
         courseware.failure_code = code
         courseware.failure_message = message
         courseware.failure_detail = message
-    if attempt is not None and attempt.status == "RUNNING":
-        attempt.status = "FAILED"
-        attempt.error_code = code
-        attempt.error_message = message
-        attempt.finished_at = utcnow()
+    if attempt_no is not None:
+        attempt_result = await db.execute(
+            select(ConversionAttempt).where(
+                ConversionAttempt.courseware_id == courseware_id,
+                ConversionAttempt.attempt_no == attempt_no,
+            )
+        )
+        attempt = attempt_result.scalar_one_or_none()
+        if attempt is not None and attempt.status == "RUNNING":
+            attempt.status = "FAILED"
+            attempt.error_code = code
+            attempt.error_message = message
+            attempt.finished_at = utcnow()
     await db.commit()
 
 

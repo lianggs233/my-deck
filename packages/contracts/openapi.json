@@ -1269,6 +1269,203 @@
           }
         }
       }
+    },
+    "/api/v1/courses/{course_id}/classrooms": {
+      "post": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Start Classroom",
+        "operationId": "start_classroom_api_v1_courses__course_id__classrooms_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassroomStartRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassroomStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/classrooms/{classroom_id}": {
+      "get": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Get Classroom",
+        "operationId": "get_classroom_api_v1_courses__course_id__classrooms__classroom_id__get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassroomDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/join-info": {
+      "get": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Get Join Info",
+        "operationId": "get_join_info_api_v1_classrooms__classroom_id__join_info_get",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinInfoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/pages": {
+      "post": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Turn Page",
+        "operationId": "turn_page_api_v1_classrooms__classroom_id__pages_post",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageTurnRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageStateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1444,6 +1641,157 @@
           "user"
         ],
         "title": "AuthUserResponse"
+      },
+      "ClassroomDetailResponse": {
+        "properties": {
+          "classroom": {
+            "$ref": "#/components/schemas/ClassroomSummary"
+          },
+          "courseName": {
+            "type": "string",
+            "title": "Coursename"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "classroom",
+          "courseName"
+        ],
+        "title": "ClassroomDetailResponse"
+      },
+      "ClassroomStartRequest": {
+        "properties": {
+          "coursewareId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Coursewareid"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "coursewareId"
+        ],
+        "title": "ClassroomStartRequest"
+      },
+      "ClassroomStartResponse": {
+        "properties": {
+          "classroom": {
+            "$ref": "#/components/schemas/ClassroomSummary"
+          },
+          "joinInfo": {
+            "$ref": "#/components/schemas/JoinInfo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "classroom",
+          "joinInfo"
+        ],
+        "title": "ClassroomStartResponse"
+      },
+      "ClassroomSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "courseId": {
+            "type": "string",
+            "title": "Courseid"
+          },
+          "coursewareId": {
+            "type": "string",
+            "title": "Coursewareid"
+          },
+          "coursewareVersion": {
+            "type": "integer",
+            "title": "Coursewareversion"
+          },
+          "teacherId": {
+            "type": "string",
+            "title": "Teacherid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "pageIndex": {
+            "type": "integer",
+            "title": "Pageindex"
+          },
+          "pageCount": {
+            "type": "integer",
+            "title": "Pagecount"
+          },
+          "stateVersion": {
+            "type": "integer",
+            "title": "Stateversion"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Startedat"
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "courseId",
+          "coursewareId",
+          "coursewareVersion",
+          "teacherId",
+          "name",
+          "status",
+          "pageIndex",
+          "pageCount",
+          "stateVersion",
+          "startedAt"
+        ],
+        "title": "ClassroomSummary"
       },
       "ConversionAttemptItem": {
         "properties": {
@@ -2016,6 +2364,48 @@
         ],
         "title": "JoinCourseRequest"
       },
+      "JoinInfo": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "joinUrl": {
+            "type": "string",
+            "title": "Joinurl"
+          },
+          "canCopy": {
+            "type": "boolean",
+            "title": "Cancopy"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "joinUrl",
+          "canCopy"
+        ],
+        "title": "JoinInfo"
+      },
+      "JoinInfoResponse": {
+        "properties": {
+          "joinInfo": {
+            "$ref": "#/components/schemas/JoinInfo"
+          },
+          "classroomStatus": {
+            "type": "string",
+            "title": "Classroomstatus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "joinInfo",
+          "classroomStatus"
+        ],
+        "title": "JoinInfoResponse"
+      },
       "LoginRequest": {
         "properties": {
           "identifier": {
@@ -2095,6 +2485,72 @@
           "teacherName"
         ],
         "title": "MembershipSummary"
+      },
+      "PageStateResponse": {
+        "properties": {
+          "classroomId": {
+            "type": "string",
+            "title": "Classroomid"
+          },
+          "pageIndex": {
+            "type": "integer",
+            "title": "Pageindex"
+          },
+          "pageCount": {
+            "type": "integer",
+            "title": "Pagecount"
+          },
+          "stateVersion": {
+            "type": "integer",
+            "title": "Stateversion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "classroomId",
+          "pageIndex",
+          "pageCount",
+          "stateVersion"
+        ],
+        "title": "PageStateResponse"
+      },
+      "PageTurnRequest": {
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "NEXT",
+              "PREV",
+              "GOTO"
+            ],
+            "title": "Direction"
+          },
+          "pageIndex": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pageindex"
+          },
+          "expectedStateVersion": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expectedstateversion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "direction",
+          "expectedStateVersion"
+        ],
+        "title": "PageTurnRequest"
       },
       "PasswordResetCompleteRequest": {
         "properties": {

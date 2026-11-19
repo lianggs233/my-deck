@@ -12,6 +12,11 @@ def new_course_code() -> str:
     return "".join(secrets.choice(COURSE_CODE_ALPHABET) for _ in range(8))
 
 
+def new_classroom_code() -> str:
+    """6 位課堂碼：大寫字母＋數字，排除 0/O/1/I（REQ-006）。"""
+    return "".join(secrets.choice(COURSE_CODE_ALPHABET) for _ in range(6))
+
+
 def new_verification_code() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 

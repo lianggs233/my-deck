@@ -8,10 +8,12 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -208,3 +210,37 @@ class IdempotencyRecord(Base):
     response_status: Mapped[int | None] = mapped_column(Integer, default=None)
     response_body: Mapped[str | None] = mapped_column(Text, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Classroom(Base):
+    """即時課堂（REQ-006）：同課程／同老師各只允許一個進行中課堂（部分唯一索引）。"""
+
+    __tablename__ = "classrooms"
+    __table_args__ = (
+        Index(
+            "uq_classroom_live_course",
+            "course_id",
+            unique=True,
+            sqlite_where=text("status = 'LIVE'"),
+        ),
+        Index(
+            "uq_classroom_live_teacher",
+            "teacher_id",
+            unique=True,
+            sqlite_where=text("status = 'LIVE'"),
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    course_id: Mapped[str] = mapped_column(String(40), ForeignKey("courses.id"), index=True)
+    courseware_id: Mapped[str] = mapped_column(String(40), ForeignKey("coursewares.id"))
+    courseware_version: Mapped[int] = mapped_column(Integer)
+    teacher_id: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(50))
+    code: Mapped[str] = mapped_column(String(6), unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(16), default="LIVE", index=True)  # LIVE / ENDED
+    page_index: Mapped[int] = mapped_column(Integer, default=0)
+    page_count: Mapped[int] = mapped_column(Integer)
+    state_version: Mapped[int] = mapped_column(Integer, default=1)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

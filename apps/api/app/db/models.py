@@ -302,3 +302,74 @@ class ClassroomJoinAttempt(Base):
     ip: Mapped[str] = mapped_column(String(64), index=True)
     success: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class SharedAnnotationGroup(Base):
+    """共享標記群組（REQ-012）：同一標記下的留言共用明確群組 ID，不依距離自動合併。"""
+
+    __tablename__ = "shared_annotation_groups"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    classroom_id: Mapped[str] = mapped_column(String(40), ForeignKey("classrooms.id"), index=True)
+    page_index: Mapped[int] = mapped_column(Integer)
+    x: Mapped[float] = mapped_column(Float)
+    y: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class SharedAnnotation(Base):
+    """共享文字標註（REQ-011～013）：作者本人 CRUD；老師以可見性管理，不可改學生原文。"""
+
+    __tablename__ = "shared_annotations"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    classroom_id: Mapped[str] = mapped_column(String(40), ForeignKey("classrooms.id"), index=True)
+    group_id: Mapped[str] = mapped_column(
+        String(40), ForeignKey("shared_annotation_groups.id"), index=True
+    )
+    author_id: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"), index=True)
+    author_role: Mapped[str] = mapped_column(String(10))  # TEACHER / STUDENT
+    content: Mapped[str] = mapped_column(String(100))
+    page_index: Mapped[int] = mapped_column(Integer)
+    # VISIBLE / HIDDEN（老師管理）/ DELETED（作者刪除）/ CLEARED（老師清除整頁，不可恢復）
+    status: Mapped[str] = mapped_column(String(16), default="VISIBLE", index=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
+
+
+class SharedAnnotationReply(Base):
+    """老師對學生共享標註的回覆（REQ-012）：獨立記錄，不覆蓋學生原文。"""
+
+    __tablename__ = "shared_annotation_replies"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    annotation_id: Mapped[str] = mapped_column(
+        String(40), ForeignKey("shared_annotations.id"), index=True
+    )
+    teacher_id: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"), index=True)
+    content: Mapped[str] = mapped_column(String(100))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
+
+
+class ClassroomShareGrant(Base):
+    """學生共享標註授註授權（REQ-011）：僅限當前課堂；收回後禁止新增／修改／移動／刪除。"""
+
+    __tablename__ = "classroom_share_grants"
+    __table_args__ = (UniqueConstraint("classroom_id", "student_id", name="uq_share_grant"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    classroom_id: Mapped[str] = mapped_column(String(40), ForeignKey("classrooms.id"), index=True)
+    student_id: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"), index=True)
+    granted: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )

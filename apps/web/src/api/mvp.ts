@@ -3,6 +3,7 @@ import { apiFetch, apiPutRaw, sha256Hex } from './http'
 import type {
   ActiveClassroom,
   Annotation,
+  AnnotationPosition,
   AuthSession,
   Classroom,
   ClassroomDetail,
@@ -25,6 +26,11 @@ import type {
   PageDirection,
   RegisterRequest,
   RegistrationChallenge,
+  SharedAnnotation,
+  SharedAnnotationListResult,
+  SharedAuthor,
+  SharedReply,
+  SharePermissionStudent,
   UpdateAnnotationRequest,
   User,
   UserRole,
@@ -544,6 +550,153 @@ export const annotationApi = {
   async remove(courseId: string, coursewareId: string, annotationId: string): Promise<void> {
     await apiFetch(`/courses/${courseId}/coursewares/${coursewareId}/annotations/${annotationId}`, {
       method: 'DELETE',
+    })
+  },
+}
+
+type ApiSharedAnnotation = Schemas['SharedAnnotationItem']
+type ApiSharedAnnotationListResponse = Schemas['SharedAnnotationListResponse']
+type ApiSharedAnnotationResponse = Schemas['SharedAnnotationResponse']
+type ApiSharedReply = Schemas['SharedReplyItem']
+type ApiSharePermissionListResponse = Schemas['SharePermissionListResponse']
+
+function toSharedReply(reply: ApiSharedReply): SharedReply {
+  return {
+    id: reply.id,
+    author: reply.author as SharedAuthor,
+    content: reply.content,
+    version: reply.version,
+    createdAt: reply.createdAt,
+  }
+}
+
+function toSharedAnnotation(item: ApiSharedAnnotation): SharedAnnotation {
+  return {
+    id: item.id,
+    classroomId: item.classroomId,
+    pageIndex: item.pageIndex,
+    groupId: item.groupId,
+    content: item.content,
+    position: item.position,
+    author: item.author as SharedAuthor,
+    visibility: item.visibility as SharedAnnotation['visibility'],
+    version: item.version,
+    createdAt: item.createdAt,
+    replies: item.replies.map(toSharedReply),
+  }
+}
+
+/** 共享標註（REQ-011～013）：課堂層級，老師與被授權學生可寫入；訪客無共享層 */
+export const sharedAnnotationApi = {
+  async list(
+    classroomId: string,
+    pageIndex: number,
+    visibility?: 'ALL' | 'VISIBLE' | 'HIDDEN',
+  ): Promise<SharedAnnotationListResult> {
+    const query = visibility
+      ? `page_index=${pageIndex}&visibility=${visibility}`
+      : `page_index=${pageIndex}`
+    const data = await apiFetch<ApiSharedAnnotationListResponse>(
+      `/classrooms/${classroomId}/shared-annotations?${query}`,
+    )
+    return { items: data.items.map(toSharedAnnotation), canShare: data.canShare }
+  },
+
+  async create(
+    classroomId: string,
+    request: {
+      pageIndex: number
+      content: string
+      position?: AnnotationPosition
+      groupId?: string
+    },
+  ): Promise<SharedAnnotation> {
+    const data = await apiFetch<ApiSharedAnnotationResponse>(
+      `/classrooms/${classroomId}/shared-annotations`,
+      { method: 'POST', body: request },
+    )
+    return toSharedAnnotation(data.annotation)
+  },
+
+  async update(
+    classroomId: string,
+    annotationId: string,
+    request: { expectedVersion: number; content?: string; position?: AnnotationPosition },
+  ): Promise<SharedAnnotation> {
+    const data = await apiFetch<ApiSharedAnnotationResponse>(
+      `/classrooms/${classroomId}/shared-annotations/${annotationId}`,
+      { method: 'PATCH', body: request },
+    )
+    return toSharedAnnotation(data.annotation)
+  },
+
+  async remove(classroomId: string, annotationId: string): Promise<void> {
+    await apiFetch(`/classrooms/${classroomId}/shared-annotations/${annotationId}`, {
+      method: 'DELETE',
+    })
+  },
+
+  async addReply(classroomId: string, annotationId: string, content: string): Promise<SharedReply> {
+    const data = await apiFetch<{ reply: ApiSharedReply }>(
+      `/classrooms/${classroomId}/shared-annotations/${annotationId}/replies`,
+      { method: 'POST', body: { content } },
+    )
+    return toSharedReply(data.reply)
+  },
+
+  async updateReply(
+    classroomId: string,
+    replyId: string,
+    request: { expectedVersion: number; content: string },
+  ): Promise<SharedReply> {
+    const data = await apiFetch<{ reply: ApiSharedReply }>(
+      `/classrooms/${classroomId}/shared-annotations/replies/${replyId}`,
+      { method: 'PATCH', body: request },
+    )
+    return toSharedReply(data.reply)
+  },
+
+  async removeReply(classroomId: string, replyId: string): Promise<void> {
+    await apiFetch(`/classrooms/${classroomId}/shared-annotations/replies/${replyId}`, {
+      method: 'DELETE',
+    })
+  },
+
+  async setVisibility(
+    classroomId: string,
+    annotationId: string,
+    visibility: 'VISIBLE' | 'HIDDEN',
+  ): Promise<SharedAnnotation> {
+    const data = await apiFetch<ApiSharedAnnotationResponse>(
+      `/classrooms/${classroomId}/shared-annotations/${annotationId}/visibility`,
+      { method: 'PUT', body: { visibility } },
+    )
+    return toSharedAnnotation(data.annotation)
+  },
+
+  async clearPage(classroomId: string, pageIndex: number): Promise<number> {
+    const data = await apiFetch<{ clearedCount: number }>(
+      `/classrooms/${classroomId}/shared-annotations/clear`,
+      { method: 'POST', body: { pageIndex, confirm: true } },
+    )
+    return data.clearedCount
+  },
+
+  async listPermissions(classroomId: string): Promise<SharePermissionStudent[]> {
+    const data = await apiFetch<ApiSharePermissionListResponse>(
+      `/classrooms/${classroomId}/share-permissions`,
+    )
+    return data.items.map((item) => ({
+      studentId: item.studentId,
+      displayName: item.displayName,
+      granted: item.granted,
+    }))
+  },
+
+  async setPermission(classroomId: string, studentId: string, granted: boolean): Promise<void> {
+    await apiFetch(`/classrooms/${classroomId}/students/${studentId}/share-permission`, {
+      method: 'PUT',
+      body: { granted },
     })
   },
 }

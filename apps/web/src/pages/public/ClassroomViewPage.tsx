@@ -4,25 +4,39 @@ import {
   Button,
   Group,
   Loader,
+  Modal,
   Paper,
   Stack,
   Text,
+  TextInput,
   Title,
   Tooltip,
 } from '@mantine/core'
 import { IconWifi, IconWifiOff } from '@tabler/icons-react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '../../api/http'
-import { annotationApi, classroomApi } from '../../api/mvp'
+import { annotationApi, classroomApi, sharedAnnotationApi } from '../../api/mvp'
+import { useAuth } from '../../auth/useAuth'
+import { SharedAnnotationLayer } from '../../components/ui/SharedAnnotationLayer'
 import { SlideCanvas } from '../../components/ui/SlideCanvas'
 import { StatusPill } from '../../components/ui/StatusPill'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
+import type { AnnotationPosition, SharedAnnotation } from '../../types/domain'
 
 /** 輪詢週期（毫秒）；SSE 事件為即時觸發，輪詢作斷線重連與兼容 */
 const POLL_MS = 3000
+
+/** 點擊畫布換算 0–1 相對座標（共享標註位置釘選頁面） */
+function canvasPosition(event: MouseEvent<HTMLDivElement>): AnnotationPosition {
+  const rect = event.currentTarget.getBoundingClientRect()
+  return {
+    x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
+    y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
+  }
+}
 
 /**
  * 課堂觀看頁（REQ-007～REQ-009）：已加入課程學生、未加入學生及訪客共用。
@@ -35,8 +49,11 @@ export function ClassroomViewPage() {
   const guestId = searchParams.get('guest')
   const queryClient = useQueryClient()
   const { showError } = useErrorAlert()
+  const { user } = useAuth()
   const [live, setLive] = useState(false)
   const [online, setOnline] = useState(() => navigator.onLine)
+  const [draftPosition, setDraftPosition] = useState<AnnotationPosition | null>(null)
+  const [newContent, setNewContent] = useState('')
   /** 已確認的最新狀態版本：較舊的 SSE 事件直接忽略，不回退到舊頁（TASK-141） */
   const stateVersionRef = useRef(0)
 
@@ -67,6 +84,55 @@ export function ClassroomViewPage() {
   })
   const annotations = annotationsQuery.data ?? []
 
+  // 共享標註層（REQ-011／012）：學生可見 VISIBLE 項目；訪客不查詢不顯示
+  const sharedQuery = useQuery({
+    queryKey: ['shared-annotations', classroomId, snapshot?.pageIndex ?? 0],
+    queryFn: () => sharedAnnotationApi.list(classroomId, snapshot?.pageIndex ?? 0),
+    enabled: Boolean(isStudentParticipant && snapshot),
+  })
+  const sharedItems = sharedQuery.data?.items ?? []
+  const canShare = Boolean(sharedQuery.data?.canShare) && !ended && online
+
+  function invalidateShared() {
+    void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
+  }
+
+  const createSharedMutation = useMutation({
+    mutationFn: (input: { content: string; position?: AnnotationPosition; groupId?: string }) =>
+      sharedAnnotationApi.create(classroomId, {
+        pageIndex: snapshot?.pageIndex ?? 0,
+        content: input.content,
+        position: input.position,
+        groupId: input.groupId,
+      }),
+    onSuccess: () => {
+      invalidateShared()
+      setDraftPosition(null)
+      setNewContent('')
+    },
+    onError: (cause) =>
+      showError(cause instanceof Error ? cause.message : '建立共享標註失敗，請稍後再試。'),
+  })
+  const updateSharedMutation = useMutation({
+    mutationFn: (input: { annotation: SharedAnnotation; content: string }) =>
+      sharedAnnotationApi.update(classroomId, input.annotation.id, {
+        expectedVersion: input.annotation.version,
+        content: input.content,
+      }),
+    onSuccess: invalidateShared,
+    onError: (cause) => showError(cause instanceof Error ? cause.message : '更新共享標註失敗。'),
+  })
+  const deleteSharedMutation = useMutation({
+    mutationFn: (annotation: SharedAnnotation) =>
+      sharedAnnotationApi.remove(classroomId, annotation.id),
+    onSuccess: invalidateShared,
+    onError: (cause) => showError(cause instanceof Error ? cause.message : '刪除共享標註失敗。'),
+  })
+  const sharedBusy =
+    createSharedMutation.isPending ||
+    updateSharedMutation.isPending ||
+    deleteSharedMutation.isPending
+
   // 連線狀態：離線保留最後確認畫面並明確標示；恢復時立即取最新快照（TASK-146／147）
   useEffect(() => {
     const handleOnline = () => {
@@ -95,18 +161,28 @@ export function ClassroomViewPage() {
     if (!classroomId) return undefined
     const source = new EventSource(classroomApi.eventStreamUrl(classroomId, guestId))
     const onState = (event: MessageEvent) => {
+      let isSharedEvent = false
       try {
-        const payload = JSON.parse(String(event.data)) as { stateVersion?: number }
+        const payload = JSON.parse(String(event.data)) as {
+          stateVersion?: number
+          type?: string
+        }
         if (
           typeof payload.stateVersion === 'number' &&
           payload.stateVersion < stateVersionRef.current
         ) {
           return
         }
+        isSharedEvent = payload.type === 'shared-annotation'
       } catch {
         // 無法解析的事件不影響同步，仍以快照校正
       }
       setLive(true)
+      if (isSharedEvent) {
+        // 共享標註變更不影響頁碼版本，只重整共享層（REQ-011 即時同步）
+        void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
+        return
+      }
       void queryClient.invalidateQueries({
         queryKey: ['classroom-snapshot', classroomId, guestId],
       })
@@ -285,7 +361,56 @@ export function ClassroomViewPage() {
                   pageNumber={snapshot.pageIndex + 1}
                   totalPages={snapshot.pageCount}
                   imageUrl={snapshot.pageImageUrl}
-                  annotations={annotationDots}
+                  interactive={canShare}
+                  onClick={(event) => {
+                    if (!canShare) return
+                    setDraftPosition(canvasPosition(event))
+                    setNewContent('')
+                  }}
+                  draftMarker={
+                    draftPosition ? (
+                      <Box
+                        aria-hidden
+                        style={{
+                          position: 'absolute',
+                          left: `${draftPosition.x * 100}%`,
+                          top: `${draftPosition.y * 100}%`,
+                          transform: 'translate(-50%, -50%)',
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          background: 'rgba(18, 131, 111, 0.35)',
+                          border: '2px dashed #12836F',
+                          zIndex: 4,
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    ) : undefined
+                  }
+                  annotations={
+                    <>
+                      {annotationDots}
+                      {isStudentParticipant ? (
+                        <SharedAnnotationLayer
+                          annotations={sharedItems}
+                          canShare={canShare}
+                          currentUserId={user?.id ?? ''}
+                          isTeacher={false}
+                          busy={sharedBusy}
+                          onAddComment={(groupId, content) =>
+                            createSharedMutation.mutate({ groupId, content })
+                          }
+                          onEdit={(annotation, content) =>
+                            updateSharedMutation.mutate({ annotation, content })
+                          }
+                          onDelete={(annotation) => deleteSharedMutation.mutate(annotation)}
+                          onReply={() => undefined}
+                          onEditReply={() => undefined}
+                          onDeleteReply={() => undefined}
+                        />
+                      ) : null}
+                    </>
+                  }
                 />
               </Paper>
 
@@ -332,6 +457,40 @@ export function ClassroomViewPage() {
           )}
         </Box>
       </Box>
+
+      <Modal
+        opened={draftPosition !== null}
+        onClose={() => setDraftPosition(null)}
+        title="新增共享標註"
+        centered
+      >
+        <Stack gap="md">
+          <TextInput
+            label="標註內容"
+            placeholder="輸入 1–100 字標註"
+            value={newContent}
+            onChange={(event) => setNewContent(event.currentTarget.value)}
+            maxLength={100}
+          />
+          <Group justify="flex-end" gap="sm">
+            <Button variant="default" onClick={() => setDraftPosition(null)}>
+              取消
+            </Button>
+            <Button
+              loading={createSharedMutation.isPending}
+              disabled={!newContent.trim()}
+              onClick={() =>
+                createSharedMutation.mutate({
+                  content: newContent.trim(),
+                  position: draftPosition ?? undefined,
+                })
+              }
+            >
+              建立標註
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Box>
   )
 }

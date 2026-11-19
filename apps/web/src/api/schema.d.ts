@@ -636,6 +636,178 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/classrooms/{classroom_id}/shared-annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Shared Annotations
+         * @description 共享層查詢：老師可篩選全部／可見／隱藏；學生只看可見；訪客一律 403。
+         */
+        get: operations["list_shared_annotations_api_v1_classrooms__classroom_id__shared_annotations_get"];
+        put?: never;
+        /**
+         * Create Shared Annotation
+         * @description 建立共享標註：老師直接建立；學生須有當前課堂授權（REQ-011）。
+         */
+        post: operations["create_shared_annotation_api_v1_classrooms__classroom_id__shared_annotations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/shared-annotations/{annotation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Shared Annotation
+         * @description 作者刪除自己的共享標註（軟刪除）；老師不能代刪學生原文。
+         */
+        delete: operations["delete_shared_annotation_api_v1_classrooms__classroom_id__shared_annotations__annotation_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch Shared Annotation
+         * @description 作者修改文字或位置；學生須仍持有效授權；不可改作者或群組。
+         */
+        patch: operations["patch_shared_annotation_api_v1_classrooms__classroom_id__shared_annotations__annotation_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/shared-annotations/{annotation_id}/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Reply
+         * @description 負責老師回覆學生的共享標註（獨立記錄，不覆蓋原文）。
+         */
+        post: operations["create_reply_api_v1_classrooms__classroom_id__shared_annotations__annotation_id__replies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/shared-annotations/replies/{reply_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Reply
+         * @description 老師刪除自己的回覆（軟刪除），保留學生原文。
+         */
+        delete: operations["delete_reply_api_v1_classrooms__classroom_id__shared_annotations_replies__reply_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch Reply
+         * @description 老師修改自己的回覆（expectedVersion 樂觀鎖），學生原文不受影響。
+         */
+        patch: operations["patch_reply_api_v1_classrooms__classroom_id__shared_annotations_replies__reply_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/shared-annotations/{annotation_id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Visibility
+         * @description 老師顯示／隱藏共享標註（REQ-013）；已刪除／清除內容不可藉此復活。
+         */
+        put: operations["set_visibility_api_v1_classrooms__classroom_id__shared_annotations__annotation_id__visibility_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/shared-annotations/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clear Page
+         * @description 老師二次確認後清除目前頁共享內容（不可經介面恢復）；個人標註與其他頁不受影響。
+         */
+        post: operations["clear_page_api_v1_classrooms__classroom_id__shared_annotations_clear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/share-permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Share Permissions
+         * @description 老師查看當前課堂學生及授權狀態（只回傳授權所需最少資料）。
+         */
+        get: operations["list_share_permissions_api_v1_classrooms__classroom_id__share_permissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/students/{student_id}/share-permission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Share Permission
+         * @description 授予／收回學生共享標註權限（僅限當前課堂）；收回後既有內容保留但禁止變更。
+         */
+        put: operations["set_share_permission_api_v1_classrooms__classroom_id__students__student_id__share_permission_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -819,6 +991,23 @@ export interface components {
             startedAt: string;
             /** Endedat */
             endedAt?: string | null;
+        };
+        /** ClearPageRequest */
+        ClearPageRequest: {
+            /** Pageindex */
+            pageIndex: number;
+            /**
+             * Confirm
+             * @constant
+             */
+            confirm: true;
+        };
+        /** ClearPageResponse */
+        ClearPageResponse: {
+            /** Clearedcount */
+            clearedCount: number;
+            /** Pageindex */
+            pageIndex: number;
         };
         /** ConversionAttemptItem */
         ConversionAttemptItem: {
@@ -1185,6 +1374,22 @@ export interface components {
             /** Resendafter */
             resendAfter: number;
         };
+        /** ReplyCreateRequest */
+        ReplyCreateRequest: {
+            /** Content */
+            content: string;
+        };
+        /** ReplyPatchRequest */
+        ReplyPatchRequest: {
+            /** Content */
+            content: string;
+            /** Expectedversion */
+            expectedVersion: number;
+        };
+        /** ReplyResponse */
+        ReplyResponse: {
+            reply: components["schemas"]["SharedReplyItem"];
+        };
         /** RetryResponse */
         RetryResponse: {
             /** Coursewareid */
@@ -1193,6 +1398,114 @@ export interface components {
             status: string;
             /** Attemptno */
             attemptNo: number;
+        };
+        /** SharePermissionListResponse */
+        SharePermissionListResponse: {
+            /** Items */
+            items: components["schemas"]["SharePermissionStudent"][];
+        };
+        /** SharePermissionRequest */
+        SharePermissionRequest: {
+            /** Granted */
+            granted: boolean;
+        };
+        /** SharePermissionStudent */
+        SharePermissionStudent: {
+            /** Studentid */
+            studentId: string;
+            /** Displayname */
+            displayName: string;
+            /** Granted */
+            granted: boolean;
+        };
+        /** SharedAnnotationCreateRequest */
+        SharedAnnotationCreateRequest: {
+            /** Pageindex */
+            pageIndex: number;
+            /** Content */
+            content: string;
+            position?: components["schemas"]["Position"] | null;
+            /** Groupid */
+            groupId?: string | null;
+        };
+        /** SharedAnnotationItem */
+        SharedAnnotationItem: {
+            /** Id */
+            id: string;
+            /** Classroomid */
+            classroomId: string;
+            /** Groupid */
+            groupId: string;
+            /** Pageindex */
+            pageIndex: number;
+            /** Content */
+            content: string;
+            position: components["schemas"]["Position"];
+            author: components["schemas"]["SharedAuthor"];
+            /** Visibility */
+            visibility: string;
+            /** Version */
+            version: number;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+            /** Replies */
+            replies: components["schemas"]["SharedReplyItem"][];
+        };
+        /** SharedAnnotationListResponse */
+        SharedAnnotationListResponse: {
+            /** Items */
+            items: components["schemas"]["SharedAnnotationItem"][];
+            /** Canshare */
+            canShare: boolean;
+        };
+        /** SharedAnnotationPatchRequest */
+        SharedAnnotationPatchRequest: {
+            /** Expectedversion */
+            expectedVersion: number;
+            /** Content */
+            content?: string | null;
+            position?: components["schemas"]["Position"] | null;
+        };
+        /** SharedAnnotationResponse */
+        SharedAnnotationResponse: {
+            annotation: components["schemas"]["SharedAnnotationItem"];
+        };
+        /** SharedAuthor */
+        SharedAuthor: {
+            /** Id */
+            id: string;
+            /** Displayname */
+            displayName: string;
+            /** Role */
+            role: string;
+        };
+        /** SharedReplyItem */
+        SharedReplyItem: {
+            /** Id */
+            id: string;
+            /** Content */
+            content: string;
+            author: components["schemas"]["SharedAuthor"];
+            /** Version */
+            version: number;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
         };
         /** UploadCompleteRequest */
         UploadCompleteRequest: {
@@ -1249,6 +1562,14 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VisibilityRequest */
+        VisibilityRequest: {
+            /**
+             * Visibility
+             * @enum {string}
+             */
+            visibility: "VISIBLE" | "HIDDEN";
         };
     };
     responses: never;
@@ -2411,6 +2732,381 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_shared_annotations_api_v1_classrooms__classroom_id__shared_annotations_get: {
+        parameters: {
+            query: {
+                page_index: number;
+                visibility?: string | null;
+            };
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedAnnotationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_shared_annotation_api_v1_classrooms__classroom_id__shared_annotations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedAnnotationCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedAnnotationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_shared_annotation_api_v1_classrooms__classroom_id__shared_annotations__annotation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                annotation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_shared_annotation_api_v1_classrooms__classroom_id__shared_annotations__annotation_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                annotation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedAnnotationPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedAnnotationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_reply_api_v1_classrooms__classroom_id__shared_annotations__annotation_id__replies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                annotation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_reply_api_v1_classrooms__classroom_id__shared_annotations_replies__reply_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                reply_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_reply_api_v1_classrooms__classroom_id__shared_annotations_replies__reply_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                reply_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_visibility_api_v1_classrooms__classroom_id__shared_annotations__annotation_id__visibility_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                annotation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedAnnotationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_page_api_v1_classrooms__classroom_id__shared_annotations_clear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClearPageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClearPageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_share_permissions_api_v1_classrooms__classroom_id__share_permissions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharePermissionListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_share_permission_api_v1_classrooms__classroom_id__students__student_id__share_permission_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                student_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharePermissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharePermissionStudent"];
                 };
             };
             /** @description Validation Error */

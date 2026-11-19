@@ -216,3 +216,46 @@ export interface ActiveClassroom {
   classroom?: ClassroomLiveState
   courseName: string
 }
+
+/** 共享標註可見性（REQ-011～013）；DELETED／CLEARED 永不回傳給前端 */
+export type SharedVisibility = 'VISIBLE' | 'HIDDEN'
+
+export interface SharedAuthor {
+  id: string
+  displayName: string
+  role: 'TEACHER' | 'STUDENT'
+}
+
+export interface SharedReply {
+  id: string
+  author: SharedAuthor
+  content: string
+  version: number
+  createdAt: string
+}
+
+export interface SharedAnnotation {
+  id: string
+  classroomId: string
+  pageIndex: number
+  groupId: string
+  content: string
+  position: AnnotationPosition
+  author: SharedAuthor
+  visibility: SharedVisibility
+  version: number
+  createdAt: string
+  replies: SharedReply[]
+}
+
+export interface SharedAnnotationListResult {
+  items: SharedAnnotation[]
+  /** 目前使用者是否可新增共享標註／留言（老師恒 true；學生需被授權） */
+  canShare: boolean
+}
+
+export interface SharePermissionStudent {
+  studentId: string
+  displayName: string
+  granted: boolean
+}

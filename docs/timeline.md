@@ -93,6 +93,8 @@
 
 | 補充實作 | 忘記密碼頁統一手機輸入與版面收緊 | 2026-11-19 13:05:00 HKT（約） | 2026-11-19 13:25:00 HKT（約） | 已完成 | 依使用者指示：「所有需要手機號的地方都按注冊的來，還有重設密碼的title和icon可以水平，盡量不要讓頁面留空太多導致出現滾動條」。① ForgotPasswordPage 帳號欄改與註冊／登入一致：ChannelTabs「手機號碼／電子郵件」分段（手機預設）＋RegionCodeSelect +852 前綴框＋normalizeHongKongPhone 正規化，格式錯走頂部 Alert「請輸入 8 位數手機號碼。」；全站三處手機輸入（PG-001 登入、PG-002 註冊、PG-004 忘記密碼）統一共用元件。② 標題與鑰匙 IconBox 改水平排列（Group，icon 56→48、標題 fz 32→28），外層 Stack gap lg→md、表單 gap md→sm、說明 mt sm→xs，右欄內容區 900px 視窗無內部滾動。③ 驗證：lint／typecheck／format:check／build 全過；Playwright forgot-check.mjs 10 項全過（分頁、預設、前綴、標題圖示水平、視窗無滾動、右欄無內部滾動、手機格式 Alert、390x844、完整重設流程成功回登入頁含綠字；測試後以 curl＋CSRF 還原測試帳號密碼 204）；verify.mjs 滾動回歸 27/27 全過。除錯發現後端密碼強度校驗會拒絕弱密碼（VALIDATION_ERROR 附 fields.newPassword），流程與 Alert 顯示正常。 |
 
+| 補充實作 | TASK-044 課程碼生成碰撞重試 | 2026-11-19 12:46:00 HKT | 2026-11-19 12:56:00 HKT | 待使用者檢查 | 依使用者「現在開始按照需求優先級安排後續任務」，經確認按 A（MVP 收尾）→B（技術債）→D（P1 即時課堂）→C（驗證碼）→E（P2）推進並即時開工；同時新增看板流程規則入 AGENTS.md（記工時、開工轉 In progress、完成後待使用者檢查才轉 Done）。TASK-044（REQ-002，估 1.5h，實際約 0.2h）：POST /courses 原本一次生成課程碼，碰撞時 IntegrityError 變 500；改為最多 5 次重試——候選碼於 savepoint（begin_nested）內 add＋flush，撞唯一約束即回滾本候選（物件自動 detached）重生成，以交易保證課程與課程碼一致；連續 5 次碰撞回 503 COURSE_CODE_GENERATION_FAILED「系統暫時未能建立課程，請重試。」不留無效課程。踩坑：add 必須在 begin_nested 之後（否則 begin_nested 的 snapshot flush 會在 savepoint 外觸發插入）；savepoint 回滾後物件已 detached，expunge 會報 not present，直接 continue。驗證：verify_task044.py（獨立臨時 SQLite＋ASGI 全鏈路）6 項全過——字元集排除 0/O/1/I、首次碰撞自動重生成 201、連續碰撞 503＋正確錯誤碼、失敗不留無效課程、失敗後可重試成功、冪等鍵重放回原回應；ruff format/check、mypy 全綠；openapi.json 無變化（503 動態錯誤不入 contract）。看板已轉 In progress，待使用者檢查後轉 Done。 |
+
 ---
 
 ## 附錄：實際工時記錄（2026-11-19 回填）

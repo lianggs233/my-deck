@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import (
     CsrfDep,
@@ -31,6 +32,9 @@ from app.schemas.course import (
 router = APIRouter(tags=["courses"])
 
 MAX_PAGE_SIZE = 50
+
+# 課程碼碰撞重試上限：8 位碼空間極大（32^8），連續碰撞 5 次視為異常並回報可重試錯誤
+MAX_CODE_ATTEMPTS = 5
 
 
 def _course_summary(course: Course) -> CourseSummary:
@@ -72,9 +76,23 @@ async def create_course(
         raise ApiError(
             400, "VALIDATION_ERROR", "課程名稱不正確。", fields={"name": "名稱不可為空白。"}
         )
-    course = Course(id=new_id("crs"), name=name, code=new_course_code(), teacher_id=teacher.id)
-    db.add(course)
-    await db.flush()
+    course: Course | None = None
+    for _attempt in range(MAX_CODE_ATTEMPTS):
+        candidate = Course(
+            id=new_id("crs"), name=name, code=new_course_code(), teacher_id=teacher.id
+        )
+        try:
+            # savepoint 內才 add＋flush：碰撞時只回滾本次插入，不影響同一交易內的其他操作
+            async with db.begin_nested():
+                db.add(candidate)
+                await db.flush()
+        except IntegrityError:
+            # 課程碼唯一約束碰撞：savepoint 回滾後候選已 detached，直接重新生成
+            continue
+        course = candidate
+        break
+    if course is None:
+        raise ApiError(503, "COURSE_CODE_GENERATION_FAILED", "系統暫時未能建立課程，請重試。")
     result = CourseCreated(course=_course_summary(course))
     await idem.store(db, status_code=201, payload=result)
     await db.commit()

@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 from argon2 import PasswordHasher
@@ -54,6 +55,15 @@ def password_strength_score(password: str) -> int:
 def sha256_hex(value: str | bytes) -> str:
     data = value.encode("utf-8") if isinstance(value, str) else value
     return hashlib.sha256(data).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    """分塊計算檔案 SHA-256（避免把大檔整份讀入記憶體）。"""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def hmac_hex(value: str) -> str:

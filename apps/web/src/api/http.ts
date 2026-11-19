@@ -1,5 +1,6 @@
 import type { ApiFailure } from '../types/domain'
 import { collectError } from '../utils/error-collector'
+import { sha256HexBlob } from '../utils/sha256'
 
 /**
  * API HTTP 基礎層：Session Cookie（credentials）＋ CSRF double-submit。
@@ -124,10 +125,7 @@ async function safeJson(response: Response): Promise<unknown> {
   }
 }
 
-/** 以 Web Crypto 計算檔案 SHA-256（完成上傳時回報） */
+/** 計算檔案 SHA-256（完成上傳時回報）；分塊讀取，避免整檔載入記憶體 */
 export async function sha256Hex(file: Blob): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
+  return sha256HexBlob(file)
 }

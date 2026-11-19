@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from datetime import timedelta
 
 from fastapi import APIRouter, Request
@@ -19,7 +20,7 @@ from app.api.deps import (
 from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.core.ids import new_id
-from app.core.security import sha256_hex
+from app.core.security import sha256_file
 from app.db.base import utcnow
 from app.db.models import (
     ConversionAttempt,
@@ -49,7 +50,7 @@ from app.services.conversion import (
     next_attempt_no,
     run_conversion,
 )
-from app.services.storage import exists, read_bytes, upload_object_path
+from app.services.storage import exists, upload_object_path
 
 router = APIRouter(tags=["coursewares"])
 
@@ -275,15 +276,31 @@ async def receive_upload_content(
     if upload.status == "RECEIVED":
         return {"status": "RECEIVED", "sha256": upload.sha256_expected or ""}
 
-    data = await request.body()
-    if not data:
-        raise ApiError(400, "VALIDATION_ERROR", "上傳內容不可為空。")
-    if len(data) > settings.max_upload_bytes:
-        raise ApiError(422, "UPLOAD_TOO_LARGE", "檔案超過大小上限。")
-    upload_object_path(upload.object_key).parent.mkdir(parents=True, exist_ok=True)
-    upload_object_path(upload.object_key).write_bytes(data)
-    upload.byte_size = len(data)
-    upload.sha256_expected = sha256_hex(data)
+    # 邊收邊寫檔並增量計算 SHA-256：避免 `await request.body()` 把整個檔案載入記憶體
+    target = upload_object_path(upload.object_key)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = target.with_name(f"{target.name}.part")
+    hasher = hashlib.sha256()
+    size = 0
+    try:
+        with temp_path.open("wb") as handle:
+            async for chunk in request.stream():
+                if not chunk:
+                    continue
+                size += len(chunk)
+                if size > settings.max_upload_bytes:
+                    raise ApiError(422, "UPLOAD_TOO_LARGE", "檔案超過大小上限。")
+                hasher.update(chunk)
+                handle.write(chunk)
+        if size == 0:
+            raise ApiError(400, "VALIDATION_ERROR", "上傳內容不可為空。")
+        temp_path.replace(target)
+    except BaseException:
+        temp_path.unlink(missing_ok=True)
+        raise
+
+    upload.byte_size = size
+    upload.sha256_expected = hasher.hexdigest()
     upload.status = "RECEIVED"
     await db.commit()
     return {"status": "RECEIVED", "sha256": upload.sha256_expected}
@@ -313,7 +330,7 @@ async def complete_upload(
     if upload.status != "RECEIVED" or not exists(upload.object_key):
         raise ApiError(409, "UPLOAD_NOT_RECEIVED", "尚未收到檔案內容，請先完成上傳。")
 
-    actual = sha256_hex(read_bytes(upload.object_key))
+    actual = sha256_file(upload_object_path(upload.object_key))
     if actual != payload.sha256.lower():
         raise ApiError(
             422,

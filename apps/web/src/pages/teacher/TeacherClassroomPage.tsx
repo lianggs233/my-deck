@@ -1,4 +1,4 @@
-import { Button, Group, Loader, Paper, Stack, Text } from '@mantine/core'
+import { Box, Button, Group, Loader, Paper, Stack, Text } from '@mantine/core'
 import {
   IconArrowLeft,
   IconChevronLeft,
@@ -48,11 +48,17 @@ export function TeacherClassroomPage() {
   })
 
   const turnMutation = useMutation({
-    mutationFn: (direction: PageDirection) =>
-      classroomApi.turnPage(classroomId, direction, classroom?.stateVersion ?? 1),
+    mutationFn: (request: { direction: PageDirection; pageIndex?: number }) =>
+      classroomApi.turnPage(
+        classroomId,
+        request.direction,
+        classroom?.stateVersion ?? 1,
+        request.pageIndex,
+      ),
     onSuccess: (state) => {
       queryClient.setQueryData<ClassroomDetail>(['classroom', courseId, classroomId], (previous) =>
-        previous
+        // 舊請求的延遲回應不得覆蓋較新頁碼（TASK-142／TASK-145）
+        previous && state.stateVersion > previous.classroom.stateVersion
           ? {
               ...previous,
               classroom: {
@@ -167,7 +173,7 @@ export function TeacherClassroomPage() {
                 styles={secondaryButton}
                 leftSection={<IconChevronLeft size={16} aria-hidden />}
                 disabled={!canPrev}
-                onClick={() => turnMutation.mutate('PREV')}
+                onClick={() => turnMutation.mutate({ direction: 'PREV' })}
               >
                 上一頁
               </Button>
@@ -179,11 +185,66 @@ export function TeacherClassroomPage() {
                 styles={secondaryButton}
                 rightSection={<IconChevronRight size={16} aria-hidden />}
                 disabled={!canNext}
-                onClick={() => turnMutation.mutate('NEXT')}
+                onClick={() => turnMutation.mutate({ direction: 'NEXT' })}
               >
                 下一頁
               </Button>
             </Group>
+
+            {pages.length > 1 ? (
+              <Box
+                component="nav"
+                aria-label="選擇頁面"
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  overflowX: 'auto',
+                  paddingBottom: 4,
+                }}
+              >
+                {pages.map((page) => {
+                  const isCurrent = page.pageIndex === classroom.pageIndex
+                  return (
+                    <Box
+                      key={page.pageIndex}
+                      component="button"
+                      type="button"
+                      aria-label={`跳至第 ${page.pageNumber} 頁`}
+                      aria-current={isCurrent ? 'page' : undefined}
+                      disabled={turnMutation.isPending || isCurrent}
+                      onClick={() =>
+                        turnMutation.mutate({ direction: 'GOTO', pageIndex: page.pageIndex })
+                      }
+                      style={{
+                        flexShrink: 0,
+                        width: 128,
+                        aspectRatio: '16 / 9',
+                        padding: 0,
+                        borderRadius: 12,
+                        border: isCurrent ? '3px solid #12836F' : '1px solid #D8E2E8',
+                        background: '#FFFFFF',
+                        cursor: turnMutation.isPending || isCurrent ? 'default' : 'pointer',
+                        opacity: turnMutation.isPending && !isCurrent ? 0.6 : 1,
+                        overflow: 'hidden',
+                        position: 'relative',
+                      }}
+                    >
+                      {page.thumbnailUrl ? (
+                        <img
+                          src={page.thumbnailUrl}
+                          alt=""
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <Text fz={14} c="#5D7184" ta="center" mt="25%">
+                          第 {page.pageNumber} 頁
+                        </Text>
+                      )}
+                    </Box>
+                  )
+                })}
+              </Box>
+            ) : null}
           </Stack>
         </Paper>
 

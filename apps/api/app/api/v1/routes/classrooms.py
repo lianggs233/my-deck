@@ -34,6 +34,7 @@ from app.db.models import (
     Courseware,
     CoursewarePage,
     GuestIdentity,
+    User,
 )
 from app.schemas.classroom import (
     ActiveClassroomResponse,
@@ -663,9 +664,16 @@ async def join_classroom_from_course(
     return body
 
 
+def _ensure_not_stale_session(request: Request, user: User | None) -> None:
+    """帶了 session cookie 但已失效：回 401 讓前端顯示「工作階段已失效」，而非當成未加入者。"""
+    if user is None and request.cookies.get(get_settings().session_cookie_name):
+        raise ApiError(401, "SESSION_INVALID", "你的登入工作階段已失效，請重新登入。")
+
+
 @router.get("/classrooms/{classroom_id}/snapshot", response_model=ClassroomSnapshotResponse)
 async def get_classroom_snapshot(
     classroom_id: str,
+    request: Request,
     user: OptionalUser,
     db: DbDep,
     guest_id: str | None = Query(default=None, alias="guestId"),
@@ -674,6 +682,7 @@ async def get_classroom_snapshot(
     classroom = await db.get(Classroom, classroom_id)
     if classroom is None:
         raise ApiError(404, "CLASSROOM_NOT_FOUND", "課堂不存在。")
+    _ensure_not_stale_session(request, user)
     participant = await _resolve_viewer(db, classroom, user, guest_id)
     course = await db.get(Course, classroom.course_id)
     return ClassroomSnapshotResponse(
@@ -687,6 +696,7 @@ async def get_classroom_snapshot(
 @router.get("/classrooms/{classroom_id}/events")
 async def classroom_events(
     classroom_id: str,
+    request: Request,
     user: OptionalUser,
     db: DbDep,
     guest_id: str | None = Query(default=None, alias="guestId"),
@@ -695,12 +705,15 @@ async def classroom_events(
     classroom = await db.get(Classroom, classroom_id)
     if classroom is None:
         raise ApiError(404, "CLASSROOM_NOT_FOUND", "課堂不存在。")
+    _ensure_not_stale_session(request, user)
     await _resolve_viewer(db, classroom, user, guest_id)
     initial = {
         "pageIndex": classroom.page_index,
         "pageCount": classroom.page_count,
         "stateVersion": classroom.state_version,
     }
+    # SSE 串流期間不再使用資料庫；主動歸還連線，避免大量訂閱者佔滿連線池（NFR-004）
+    await db.close()
 
     async def event_stream() -> AsyncIterator[str]:
         yield ": connected\n\n"

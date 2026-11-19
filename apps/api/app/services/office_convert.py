@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import shutil
 import subprocess
 import tempfile
 import weakref
@@ -64,17 +65,20 @@ def to_webp(image: Image.Image, long_edge: int) -> tuple[bytes, int, int]:
 
 
 async def render_office_pages(
-    original: bytes,
+    original_path: Path,
     file_name: str,
     *,
     soffice_bin: str,
     timeout_seconds: int,
 ) -> list[RenderedPage]:
-    """把簡報原檔渲染成逐頁 WebP（在執行緒中執行外部程序）。"""
+    """把簡報原檔渲染成逐頁 WebP（在執行緒中執行外部程序）。
+
+    以檔案路徑傳入，避免把整個原檔讀入記憶體（大檔在低記憶體主機會 OOM）。
+    """
     async with _conversion_semaphore():
         return await asyncio.to_thread(
             _render_office_pages_sync,
-            original,
+            original_path,
             file_name,
             soffice_bin=soffice_bin,
             timeout_seconds=timeout_seconds,
@@ -82,7 +86,7 @@ async def render_office_pages(
 
 
 def _render_office_pages_sync(
-    original: bytes,
+    original_path: Path,
     file_name: str,
     *,
     soffice_bin: str,
@@ -92,7 +96,8 @@ def _render_office_pages_sync(
     with tempfile.TemporaryDirectory(prefix="mydeck-conv-") as tmp:
         work = Path(tmp)
         source = work / f"source{suffix}"
-        source.write_bytes(original)
+        # 串流複製（shutil 分塊），不在記憶體中保留整份原檔。
+        shutil.copyfile(original_path, source)
 
         # 獨立 UserInstallation，避免並發轉換共用 profile 互相干擾。
         profile = work / "lo-profile"

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import io
 from dataclasses import dataclass
 from datetime import UTC, timedelta
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
@@ -22,7 +22,7 @@ from app.services.office_convert import (
     render_office_pages,
     to_webp,
 )
-from app.services.storage import read_bytes, save_bytes, upload_object_path
+from app.services.storage import save_bytes, upload_object_path
 
 PAGE_WIDTH = 1600
 PAGE_HEIGHT = 900
@@ -34,9 +34,12 @@ class ConversionResult:
     warning: str | None
 
 
-def _extract_slide_texts(original: bytes) -> list[str]:
-    """以 python-pptx 讀取每張投影片的文字（MVP demo 轉換器）。"""
-    presentation = Presentation(io.BytesIO(original))
+def _extract_slide_texts(source_path: Path) -> list[str]:
+    """以 python-pptx 讀取每張投影片的文字（MVP demo 轉換器）。
+
+    直接以檔案路徑開啟，避免整份原檔讀入記憶體。
+    """
+    presentation = Presentation(str(source_path))
     texts: list[str] = []
     for index, slide in enumerate(presentation.slides, start=1):
         parts: list[str] = []
@@ -88,7 +91,7 @@ async def _is_latest_attempt(db: AsyncSession, courseware_id: str, attempt_no: i
 
 
 async def _render_pages(
-    settings: Settings, original: bytes, file_name: str
+    settings: Settings, source_path: Path, file_name: str
 ) -> tuple[list[RenderedPage], str, str | None]:
     """依設定選擇轉換器，回傳（頁面圖像, 最終狀態, 警告訊息）。
 
@@ -97,7 +100,7 @@ async def _render_pages(
     """
     if settings.converter == "libreoffice":
         rendered = await render_office_pages(
-            original,
+            source_path,
             file_name,
             soffice_bin=settings.libreoffice_bin,
             timeout_seconds=settings.libreoffice_timeout_seconds,
@@ -110,7 +113,7 @@ async def _render_pages(
 
     if not file_name.lower().endswith(".pptx"):
         raise _UnsupportedFormat("Demo 轉換器僅支援 .pptx；.ppt 舊格式請改用 LibreOffice 轉換器。")
-    texts = _extract_slide_texts(original)
+    texts = _extract_slide_texts(source_path)
     if len(texts) > settings.max_courseware_pages:
         raise _TooManyPages(
             f"投影片頁數 {len(texts)} 超過上限 {settings.max_courseware_pages} 頁。"
@@ -150,9 +153,9 @@ async def run_conversion(courseware_id: str, attempt_no: int) -> None:
         )
         attempt = attempt_result.scalar_one_or_none()
         try:
-            original = read_bytes(courseware.original_object_key)
+            source_path = upload_object_path(courseware.original_object_key)
             rendered, final_status, warning = await _render_pages(
-                settings, original, courseware.file_name
+                settings, source_path, courseware.file_name
             )
 
             total = len(rendered)

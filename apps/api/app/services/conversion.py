@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
+from datetime import UTC, timedelta
 
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
@@ -13,7 +14,7 @@ from app.core.ids import new_id
 from app.db.base import utcnow
 from app.db.engine import session_factory
 from app.db.models import ConversionAttempt, Courseware, CoursewarePage
-from app.services.storage import read_bytes, save_bytes
+from app.services.storage import read_bytes, save_bytes, upload_object_path
 
 FULL_LONG_EDGE = 1920
 THUMB_LONG_EDGE = 320
@@ -74,9 +75,29 @@ def _to_webp(image: Image.Image, long_edge: int) -> bytes:
     return buffer.getvalue()
 
 
+async def _is_latest_attempt(db: AsyncSession, courseware_id: str, attempt_no: int) -> bool:
+    """舊回調防護：只有目前最新的轉換嘗試可以寫入課件狀態。
+
+    已逾時／已失敗工作的延遲回調（例如被 watchdog 取消後才返回的舊任務）
+    不得把狀態或頁面資源覆蓋成新嘗試的結果。
+    """
+    result = await db.execute(
+        select(func.max(ConversionAttempt.attempt_no)).where(
+            ConversionAttempt.courseware_id == courseware_id
+        )
+    )
+    latest = int(result.scalar_one_or_none() or 0)
+    return latest == attempt_no
+
+
 async def run_conversion(courseware_id: str, attempt_no: int) -> None:
-    """背景轉換工作（MVP 以 asyncio 執行；正式環境由 Celery worker 取代）。"""
+    """背景轉換工作（MVP 以 asyncio 執行；正式環境由 Celery worker 取代）。
+
+    頁面資源以嘗試編號隔離路徑（attempts/{attempt_no}/），避免舊嘗試的
+    延遲寫入覆蓋新嘗試已發布的檔案；最終狀態寫入前會比對最新嘗試。
+    """
     settings = get_settings()
+    written_keys: list[str] = []
     async with session_factory() as db:
         result = await db.execute(select(Courseware).where(Courseware.id == courseware_id))
         courseware = result.scalar_one_or_none()
@@ -103,14 +124,16 @@ async def run_conversion(courseware_id: str, attempt_no: int) -> None:
                 )
 
             total = len(texts)
+            pages: list[CoursewarePage] = []
             for index, text in enumerate(texts, start=1):
                 image = _render_page(text, index, total)
                 full = _to_webp(image.copy(), FULL_LONG_EDGE)
                 thumb = _to_webp(image, THUMB_LONG_EDGE)
-                base_key = f"coursewares/{courseware.id}/pages/{index - 1}"
+                base_key = f"coursewares/{courseware.id}/attempts/{attempt_no}/pages/{index - 1}"
                 save_bytes(f"{base_key}.webp", full)
                 save_bytes(f"{base_key}.thumb.webp", thumb)
-                db.add(
+                written_keys.extend([f"{base_key}.webp", f"{base_key}.thumb.webp"])
+                pages.append(
                     CoursewarePage(
                         id=new_id("page"),
                         courseware_id=courseware.id,
@@ -123,6 +146,18 @@ async def run_conversion(courseware_id: str, attempt_no: int) -> None:
                     )
                 )
 
+            if not await _is_latest_attempt(db, courseware_id, attempt_no):
+                # 舊嘗試的延遲回調：丟棄本次結果，不覆蓋新嘗試的狀態與資源。
+                _discard_written_files(written_keys)
+                if attempt is not None and attempt.status == "RUNNING":
+                    attempt.status = "SUPERSEDED"
+                    attempt.error_code = "SUPERSEDED"
+                    attempt.error_message = "已有更新的轉換嘗試，本次結果已丟棄。"
+                    attempt.finished_at = utcnow()
+                    await db.commit()
+                return
+
+            db.add_all(pages)
             courseware.status = "READY_WITH_WARNINGS"
             courseware.page_count = total
             courseware.warning = (
@@ -150,16 +185,110 @@ async def _fail(
     code: str,
     message: str,
 ) -> None:
-    courseware.status = "FAILED"
-    courseware.failure_code = code
-    courseware.failure_message = message
-    courseware.failure_detail = message
-    if attempt is not None:
+    # 舊回調防護：只有最新嘗試的失敗可以改寫課件狀態。
+    if courseware.status == "CONVERTING" and await _is_latest_attempt(
+        db, courseware.id, attempt.attempt_no if attempt is not None else -1
+    ):
+        courseware.status = "FAILED"
+        courseware.failure_code = code
+        courseware.failure_message = message
+        courseware.failure_detail = message
+    if attempt is not None and attempt.status == "RUNNING":
         attempt.status = "FAILED"
         attempt.error_code = code
         attempt.error_message = message
         attempt.finished_at = utcnow()
     await db.commit()
+
+
+async def mark_conversion_timed_out(courseware_id: str, attempt_no: int) -> None:
+    """watchdog 逾時標記：逾時嘗試標 TIMED_OUT；只有最新嘗試可改寫課件狀態。"""
+    settings = get_settings()
+    async with session_factory() as db:
+        result = await db.execute(select(Courseware).where(Courseware.id == courseware_id))
+        courseware = result.scalar_one_or_none()
+        if courseware is None:
+            return
+        attempt_result = await db.execute(
+            select(ConversionAttempt).where(
+                ConversionAttempt.courseware_id == courseware_id,
+                ConversionAttempt.attempt_no == attempt_no,
+            )
+        )
+        attempt = attempt_result.scalar_one_or_none()
+        message = f"轉換超過 {settings.conversion_timeout_seconds} 秒時限，請重新轉換。"
+        if attempt is not None and attempt.status == "RUNNING":
+            attempt.status = "TIMED_OUT"
+            attempt.error_code = "TIMED_OUT"
+            attempt.error_message = message
+            attempt.finished_at = utcnow()
+        if courseware.status == "CONVERTING" and await _is_latest_attempt(
+            db, courseware_id, attempt_no
+        ):
+            courseware.status = "TIMED_OUT"
+            courseware.failure_code = "TIMED_OUT"
+            courseware.failure_message = message
+            courseware.failure_detail = message
+        await db.commit()
+
+
+async def recover_interrupted_conversions() -> None:
+    """啟動收斂：上次程序結束遺留的 CONVERTING 課件不得永久停在轉換中。
+
+    - 已超過時限 → TIMED_OUT；
+    - 未超時但背景工作已隨程序消失 → FAILED（CONVERSION_INTERRUPTED）。
+    兩者都保留手動重試入口，不自動重試。
+    """
+    settings = get_settings()
+    async with session_factory() as db:
+        rows = (
+            (await db.execute(select(Courseware).where(Courseware.status == "CONVERTING")))
+            .scalars()
+            .all()
+        )
+        now = utcnow()
+        for courseware in rows:
+            attempt_result = await db.execute(
+                select(ConversionAttempt)
+                .where(
+                    ConversionAttempt.courseware_id == courseware.id,
+                    ConversionAttempt.status == "RUNNING",
+                )
+                .order_by(ConversionAttempt.attempt_no.desc())
+                .limit(1)
+            )
+            attempt = attempt_result.scalar_one_or_none()
+            # SQLite 讀回的時間不帶時區，統一補上 UTC 再比較（與 sessions 服務同慣例）。
+            started_at = (courseware.conversion_started_at or now).replace(tzinfo=UTC)
+            overdue = now > started_at + timedelta(seconds=settings.conversion_timeout_seconds)
+            if overdue:
+                courseware.status = "TIMED_OUT"
+                courseware.failure_code = "TIMED_OUT"
+                courseware.failure_message = (
+                    f"轉換超過 {settings.conversion_timeout_seconds} 秒時限，請重新轉換。"
+                )
+                courseware.failure_detail = courseware.failure_message
+                if attempt is not None:
+                    attempt.status = "TIMED_OUT"
+                    attempt.error_code = "TIMED_OUT"
+                    attempt.error_message = courseware.failure_message
+                    attempt.finished_at = now
+            else:
+                courseware.status = "FAILED"
+                courseware.failure_code = "CONVERSION_INTERRUPTED"
+                courseware.failure_message = "服務重新啟動導致轉換中斷，請重新轉換。"
+                courseware.failure_detail = courseware.failure_message
+                if attempt is not None:
+                    attempt.status = "FAILED"
+                    attempt.error_code = "CONVERSION_INTERRUPTED"
+                    attempt.error_message = courseware.failure_message
+                    attempt.finished_at = now
+        await db.commit()
+
+
+def _discard_written_files(keys: list[str]) -> None:
+    for key in keys:
+        upload_object_path(key).unlink(missing_ok=True)
 
 
 async def next_attempt_no(db: AsyncSession, courseware_id: str) -> int:

@@ -1,3 +1,6 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,8 +8,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.errors import ApiError, error_response
+from app.services.conversion import recover_interrupted_conversions
 
 settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    # 啟動收斂：上次程序遺留的 CONVERTING 課件標逾時／中斷，不得永久停在轉換中。
+    # 資料表尚未建立（首次啟動未跑 seed）時略過。
+    try:
+        await recover_interrupted_conversions()
+    except Exception:  # noqa: BLE001
+        pass
+    yield
+
 
 app = FastAPI(
     title=settings.app_name,
@@ -14,6 +30,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url=None,
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 

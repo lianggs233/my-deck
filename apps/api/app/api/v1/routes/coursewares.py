@@ -44,7 +44,11 @@ from app.schemas.courseware import (
     UploadCreateRequest,
     UploadCreateResponse,
 )
-from app.services.conversion import next_attempt_no, run_conversion
+from app.services.conversion import (
+    mark_conversion_timed_out,
+    next_attempt_no,
+    run_conversion,
+)
 from app.services.storage import exists, read_bytes, upload_object_path
 
 router = APIRouter(tags=["coursewares"])
@@ -162,15 +166,35 @@ _BACKGROUND_TASKS: set[asyncio.Task[None]] = set()
 
 
 def _start_conversion(courseware: Courseware, attempt: ConversionAttempt) -> None:
+    """標記進入轉換中（隨請求交易一併 commit）；背景任務由 _launch_conversion 啟動。"""
     courseware.status = "CONVERTING"
+    # 逾時計時從本次嘗試開始起算（2026-11-19 確認：每次手動重試有獨立窗口），
+    # 不因查看、離開或刷新重新起算。
     courseware.conversion_started_at = utcnow()
     courseware.failure_code = None
     courseware.failure_message = None
     courseware.failure_detail = None
     courseware.warning = None
-    task = asyncio.create_task(run_conversion(courseware.id, attempt.attempt_no))
+
+
+def _launch_conversion(courseware_id: str, attempt_no: int) -> None:
+    """commit 後才啟動背景轉換：新任務以獨立 session 讀取課件，
+    若在 commit 前啟動會讀不到未落庫的課件而靜默結束（課件卡在轉換中）。"""
+    task = asyncio.create_task(_run_conversion_with_timeout(courseware_id, attempt_no))
     _BACKGROUND_TASKS.add(task)
     task.add_done_callback(_BACKGROUND_TASKS.discard)
+
+
+async def _run_conversion_with_timeout(courseware_id: str, attempt_no: int) -> None:
+    """watchdog：轉換超過 conversion_timeout_seconds 即標 TIMED_OUT 並提供重試入口。"""
+    settings = get_settings()
+    try:
+        await asyncio.wait_for(
+            run_conversion(courseware_id, attempt_no),
+            timeout=settings.conversion_timeout_seconds,
+        )
+    except TimeoutError:
+        await mark_conversion_timed_out(courseware_id, attempt_no)
 
 
 @router.post(
@@ -305,6 +329,7 @@ async def complete_upload(
 
     existing = await db.execute(select(Courseware).where(Courseware.upload_id == upload.id))
     courseware = existing.scalar_one_or_none()
+    launch: tuple[str, int] | None = None
     if courseware is None:
         courseware = Courseware(
             id=new_id("cw"),
@@ -324,11 +349,14 @@ async def complete_upload(
         db.add(attempt)
         await db.flush()
         _start_conversion(courseware, attempt)
+        launch = (courseware.id, attempt.attempt_no)
     result_body = CoursewareDetailResponse(
         courseware=await _detail(db, courseware, is_teacher=True)
     )
     await idem.store(db, status_code=201, payload=result_body)
     await db.commit()
+    if launch is not None:
+        _launch_conversion(*launch)
     return result_body
 
 
@@ -445,6 +473,7 @@ async def retry_conversion(
     )
     await idem.store(db, status_code=202, payload=result)
     await db.commit()
+    _launch_conversion(courseware.id, attempt_no)
     return result
 
 

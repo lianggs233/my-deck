@@ -110,7 +110,9 @@ export function TeacherCoursewarePage() {
         {courseware.status === 'FAILED' || courseware.status === 'TIMED_OUT' ? (
           <>
             <Text fz={16} c="#B42318">
-              轉換失敗，可重新嘗試。
+              {courseware.status === 'TIMED_OUT'
+                ? '轉換逾時，可重新嘗試。'
+                : '轉換失敗，可重新嘗試。'}
             </Text>
             <Button
               variant="default"

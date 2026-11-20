@@ -158,7 +158,11 @@ export function ClassroomViewPage() {
   useEffect(() => {
     const handleOnline = () => {
       setOnline(true)
+      // 重連後補齊離線期間可能漏收的變更（SSE 無回放）：快照＋個人標註＋共享標註層＋簽到活動
       void queryClient.invalidateQueries({ queryKey: ['classroom-snapshot', classroomId, guestId] })
+      void queryClient.invalidateQueries({ queryKey: ['classroom-annotations', classroomId] })
+      void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
+      void queryClient.invalidateQueries({ queryKey: ['activities', classroomId] })
     }
     const handleOffline = () => setOnline(false)
     window.addEventListener('online', handleOnline)
@@ -351,7 +355,7 @@ export function ClassroomViewPage() {
       <Box
         component="header"
         bg="#FFFFFF"
-        px="clamp(16px, 3vw, 40px)"
+        px={16}
         h={96}
         style={{
           display: 'flex',

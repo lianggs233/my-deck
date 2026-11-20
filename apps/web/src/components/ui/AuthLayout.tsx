@@ -24,7 +24,7 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
         bg="#17324D"
         h="100%"
         w="clamp(400px, 42vw, 600px)"
-        px={48}
+        px={16}
         py="clamp(16px, 4vh, 48px)"
         style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}
         visibleFrom="md"
@@ -118,7 +118,7 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
           minHeight: 0,
           overflowY: 'auto',
         }}
-        px="md"
+        px={16}
       >
         <Paper
           bg="#FFFFFF"

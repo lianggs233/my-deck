@@ -15,9 +15,9 @@ import {
 import { IconCloudUpload, IconCopy, IconFile, IconFolder } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 
-import { courseApi, coursewareApi } from '../../api/mvp'
+import { classroomApi, courseApi, coursewareApi } from '../../api/mvp'
 import { CoursewareRow } from '../../components/ui/CoursewareRow'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { PageHeading } from '../../components/ui/PageHeading'
@@ -53,6 +53,13 @@ export function TeacherCoursePage() {
       (query.state.data?.items ?? []).some((item) => ['QUEUED', 'CONVERTING'].includes(item.status))
         ? 3000
         : false,
+  })
+  // 課堂進行中橫幅（TASK-148）：老師重新整理／重新進入時提供返回控制頁入口
+  const activeClassroomQuery = useQuery({
+    queryKey: ['classroom-active', courseId],
+    queryFn: () => classroomApi.active(courseId),
+    enabled: Boolean(courseId),
+    refetchInterval: 15_000,
   })
   const uploadMutation = useMutation({
     mutationFn: (target: File) => coursewareApi.upload(courseId, target),
@@ -105,6 +112,7 @@ export function TeacherCoursePage() {
   }
 
   const course = courseQuery.data
+  const activeClassroom = activeClassroomQuery.data?.classroom
 
   return (
     <Stack gap={32}>
@@ -156,6 +164,31 @@ export function TeacherCoursePage() {
           </>
         }
       />
+
+      {activeClassroom ? (
+        <Paper radius="lg" bg="#DDF4EC" p="lg" style={{ border: '1px solid #BFE6D6' }}>
+          <Group justify="space-between" wrap="wrap" gap="md">
+            <div>
+              <Text fz={14} fw={600} c="#0B6455">
+                課堂進行中
+              </Text>
+              <Text fz={20} fw={700} c="#17324D">
+                {activeClassroom.name}
+              </Text>
+              <Text fz={16} c="#5D7184">
+                第 {activeClassroom.pageIndex + 1} / {activeClassroom.pageCount} 頁
+              </Text>
+            </div>
+            <Button
+              radius="md"
+              component={Link}
+              to={`/teacher/courses/${courseId}/classrooms/${activeClassroom.id}`}
+            >
+              返回課堂
+            </Button>
+          </Group>
+        </Paper>
+      ) : null}
 
       <Paper radius="lg" bg="#FFFFFF" style={{ border: '1px solid #D8E2E8' }}>
         <Tabs defaultValue="courseware">

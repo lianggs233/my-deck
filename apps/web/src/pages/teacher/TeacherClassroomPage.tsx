@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Badge,
   Box,
   Button,
@@ -18,11 +19,14 @@ import {
   IconChevronRight,
   IconClipboardCheck,
   IconCopy,
+  IconLayoutSidebarRightCollapse,
+  IconLayoutSidebarRightExpand,
   IconListCheck,
   IconLock,
   IconMessagePlus,
   IconTrash,
   IconUsers,
+  IconWifiOff,
 } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type MouseEvent } from 'react'
@@ -79,8 +83,12 @@ export function TeacherClassroomPage() {
   const [manageOpened, setManageOpened] = useState(false)
   const [manageFilter, setManageFilter] = useState<ManageFilter>('ALL')
   const [clearOpened, setClearOpened] = useState(false)
+  /** 右側資訊面板開關：關閉時投影片佔滿全寬（使用者 2026-11-20 指示） */
+  const [panelOpen, setPanelOpen] = useState(true)
   const [checkinConfirmOpened, setCheckinConfirmOpened] = useState(false)
   const [checkinIdemKey, setCheckinIdemKey] = useState('')
+  /** 網絡連線狀態（TASK-146／147）：離線停用即時操作並提示，恢復時以伺服器最新狀態為準 */
+  const [online, setOnline] = useState(() => navigator.onLine)
 
   const classroomQuery = useQuery({
     queryKey: ['classroom', courseId, classroomId],
@@ -117,12 +125,12 @@ export function TeacherClassroomPage() {
     enabled: permissionOpened && Boolean(classroomId),
   })
 
-  // 課堂簽到（REQ-014）：SSE 觸發為主，3 秒輪詢補上即時人數
+  // 課堂簽到（REQ-014）：SSE 觸發為主，3 秒輪詢補上即時人數；離線時停輪詢（TASK-146）
   const activitiesQuery = useQuery({
     queryKey: ['activities', classroomId],
     queryFn: () => activityApi.list(classroomId),
     enabled: Boolean(classroom),
-    refetchInterval: 3000,
+    refetchInterval: online ? 3000 : false,
   })
   const openActivity = activitiesQuery.data?.openActivity
   const activityItems = activitiesQuery.data?.items ?? []
@@ -177,6 +185,26 @@ export function TeacherClassroomPage() {
       source.close()
     }
   }, [classroomId, queryClient])
+
+  // 連線狀態（TASK-146／147）：離線停用即時操作；恢復連線時立即以伺服器最新狀態校正
+  // （SSE 無回放，離線期間的共享標註／簽到變更須主動重新拉取）
+  useEffect(() => {
+    const handleOnline = () => {
+      setOnline(true)
+      void queryClient.invalidateQueries({ queryKey: ['classroom', courseId, classroomId] })
+      void queryClient.invalidateQueries({ queryKey: ['activities', classroomId] })
+      void queryClient.invalidateQueries({ queryKey: ['activity-results', classroomId] })
+      void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
+      void queryClient.invalidateQueries({ queryKey: ['shared-annotations-manage', classroomId] })
+    }
+    const handleOffline = () => setOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [courseId, classroomId, queryClient])
 
   const createSharedMutation = useMutation({
     mutationFn: (input: { content: string; position?: AnnotationPosition; groupId?: string }) =>
@@ -336,8 +364,8 @@ export function TeacherClassroomPage() {
   const currentPage = pages[classroom.pageIndex]
   const code = joinInfoQuery.data?.code ?? classroom.code ?? ''
   const joinUrl = joinInfoQuery.data?.joinUrl ?? (code ? `/join/${code}` : '')
-  const canPrev = classroom.pageIndex > 0 && !turnMutation.isPending
-  const canNext = classroom.pageIndex < classroom.pageCount - 1 && !turnMutation.isPending
+  const canPrev = classroom.pageIndex > 0 && !turnMutation.isPending && online
+  const canNext = classroom.pageIndex < classroom.pageCount - 1 && !turnMutation.isPending && online
   const sharedItems = sharedQuery.data?.items ?? []
   const manageItems = manageQuery.data?.items ?? []
   const permissionItems = permissionsQuery.data ?? []
@@ -374,6 +402,25 @@ export function TeacherClassroomPage() {
         </Stack>
         <Group gap="md">
           <StatusPill tone="mint">課堂進行中</StatusPill>
+          {!online ? (
+            <StatusPill tone="red" leftSection={<IconWifiOff size={16} aria-hidden />}>
+              已離線，顯示最後確認狀態
+            </StatusPill>
+          ) : null}
+          <ActionIcon
+            variant={panelOpen ? 'light' : 'subtle'}
+            color="teal"
+            size="lg"
+            onClick={() => setPanelOpen((value) => !value)}
+            aria-label={panelOpen ? '隱藏資訊面板' : '顯示資訊面板'}
+            title={panelOpen ? '隱藏資訊面板' : '顯示資訊面板'}
+          >
+            {panelOpen ? (
+              <IconLayoutSidebarRightCollapse size={20} aria-hidden />
+            ) : (
+              <IconLayoutSidebarRightExpand size={20} aria-hidden />
+            )}
+          </ActionIcon>
         </Group>
       </Group>
 
@@ -489,7 +536,7 @@ export function TeacherClassroomPage() {
                       type="button"
                       aria-label={`跳至第 ${page.pageNumber} 頁`}
                       aria-current={isCurrent ? 'page' : undefined}
-                      disabled={turnMutation.isPending || isCurrent}
+                      disabled={turnMutation.isPending || isCurrent || !online}
                       onClick={() =>
                         turnMutation.mutate({ direction: 'GOTO', pageIndex: page.pageIndex })
                       }
@@ -501,8 +548,9 @@ export function TeacherClassroomPage() {
                         borderRadius: 12,
                         border: isCurrent ? '3px solid #12836F' : '1px solid #D8E2E8',
                         background: '#FFFFFF',
-                        cursor: turnMutation.isPending || isCurrent ? 'default' : 'pointer',
-                        opacity: turnMutation.isPending && !isCurrent ? 0.6 : 1,
+                        cursor:
+                          turnMutation.isPending || isCurrent || !online ? 'default' : 'pointer',
+                        opacity: (turnMutation.isPending || !online) && !isCurrent ? 0.6 : 1,
                         overflow: 'hidden',
                         position: 'relative',
                       }}
@@ -526,7 +574,21 @@ export function TeacherClassroomPage() {
           </Stack>
         </Paper>
 
-        <Stack gap="lg" style={{ flex: '1 1 22rem' }}>
+        <Stack
+          gap="lg"
+          component="aside"
+          aria-label="課堂資訊面板"
+          display={panelOpen ? undefined : 'none'}
+          style={{
+            flex: '0 0 24rem',
+            maxWidth: '100%',
+            position: 'sticky',
+            top: 0,
+            alignSelf: 'flex-start',
+            maxHeight: 'calc(100dvh - 8rem)',
+            overflowY: 'auto',
+          }}
+        >
           <Paper radius="xl" bg="#FFFFFF" p="xl" style={{ border: '1px solid #D8E2E8' }}>
             <Stack gap="md">
               <Group justify="space-between">
@@ -622,6 +684,7 @@ export function TeacherClassroomPage() {
                     styles={secondaryButton}
                     leftSection={<IconClipboardCheck size={16} aria-hidden />}
                     loading={closeCheckinMutation.isPending}
+                    disabled={!online}
                     onClick={() => closeCheckinMutation.mutate(openActivity.id)}
                   >
                     結束簽到
@@ -631,6 +694,7 @@ export function TeacherClassroomPage() {
                 <>
                   <Button
                     leftSection={<IconClipboardCheck size={16} aria-hidden />}
+                    disabled={!online}
                     onClick={() => {
                       setCheckinIdemKey(crypto.randomUUID())
                       setCheckinConfirmOpened(true)

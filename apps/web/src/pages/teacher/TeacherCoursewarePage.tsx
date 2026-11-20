@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/http'
 import { classroomApi, coursewareApi } from '../../api/mvp'
 import { CoursewareStatusPill } from '../../components/ui/CoursewareStatusPill'
+import { StatusPill } from '../../components/ui/StatusPill'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { PageHeading } from '../../components/ui/PageHeading'
 import { SectionHeader } from '../../components/ui/SectionHeader'
@@ -46,6 +47,13 @@ export function TeacherCoursewarePage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['courseware', courseId, coursewareId] })
     },
+  })
+  // 課堂進行中狀態（TASK-148）：本課件有進行中課堂時提供返回控制頁入口
+  const activeClassroomQuery = useQuery({
+    queryKey: ['classroom-active', courseId],
+    queryFn: () => classroomApi.active(courseId),
+    enabled: Boolean(courseId),
+    refetchInterval: 15_000,
   })
 
   const { showError } = useErrorAlert()
@@ -87,6 +95,8 @@ export function TeacherCoursewarePage() {
   }
 
   const courseware = coursewareQuery.data
+  const liveClassroom = activeClassroomQuery.data?.classroom
+  const liveHere = liveClassroom?.coursewareId === coursewareId
 
   return (
     <Stack gap={32}>
@@ -115,21 +125,34 @@ export function TeacherCoursewarePage() {
           >
             逐頁預覽
           </Button>
-          <Button
-            leftSection={<IconPlayerPlay size={16} aria-hidden />}
-            disabled={!['READY', 'READY_WITH_WARNINGS'].includes(courseware.status)}
-            title={
-              ['READY', 'READY_WITH_WARNINGS'].includes(courseware.status)
-                ? undefined
-                : '課件轉換完成後才可開始授課'
-            }
-            onClick={() => {
-              setClassroomName(courseware.fileName.replace(/\.[^.]+$/, ''))
-              setStartOpened(true)
-            }}
-          >
-            開始授課
-          </Button>
+          {liveHere && liveClassroom ? (
+            <>
+              <StatusPill tone="mint">課堂進行中</StatusPill>
+              <Button
+                component={Link}
+                to={`/teacher/courses/${courseId}/classrooms/${liveClassroom.id}`}
+                leftSection={<IconPresentation size={16} aria-hidden />}
+              >
+                返回課堂
+              </Button>
+            </>
+          ) : (
+            <Button
+              leftSection={<IconPlayerPlay size={16} aria-hidden />}
+              disabled={!['READY', 'READY_WITH_WARNINGS'].includes(courseware.status)}
+              title={
+                ['READY', 'READY_WITH_WARNINGS'].includes(courseware.status)
+                  ? undefined
+                  : '課件轉換完成後才可開始授課'
+              }
+              onClick={() => {
+                setClassroomName(courseware.fileName.replace(/\.[^.]+$/, ''))
+                setStartOpened(true)
+              }}
+            >
+              開始授課
+            </Button>
+          )}
         </Group>
       </Group>
 

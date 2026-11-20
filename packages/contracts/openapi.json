@@ -2322,6 +2322,370 @@
           }
         }
       }
+    },
+    "/api/v1/classrooms/{classroom_id}/activities": {
+      "post": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Create Activity",
+        "description": "老師建立活動（本期僅簽到）；Idempotency-Key 重放回原活動（TASK-249）。",
+        "operationId": "create_activity_api_v1_classrooms__classroom_id__activities_post",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "List Activities",
+        "description": "活動列表：老師與已加入學生可查；訪客 403、未登入 401（不泄露其他課堂資料）。",
+        "operationId": "list_activities_api_v1_classrooms__classroom_id__activities_get",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/publish": {
+      "post": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Publish Activity",
+        "description": "發布活動；同課堂同時只允許一個 OPEN；重複發布回原狀態（TASK-249／258）。",
+        "operationId": "publish_activity_api_v1_classrooms__classroom_id__activities__activity_id__publish_post",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          },
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Activity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/close": {
+      "post": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Close Activity",
+        "description": "結束活動；重複結束回原結果（TASK-258），結束後遲交一律被拒。",
+        "operationId": "close_activity_api_v1_classrooms__classroom_id__activities__activity_id__close_post",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          },
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Activity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/results": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Activity Results",
+        "description": "老師查看簽到結果：已簽／未簽名單，由原始提交即時重算（TASK-256）。",
+        "operationId": "activity_results_api_v1_classrooms__classroom_id__activities__activity_id__results_get",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          },
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Activity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityResultsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/submissions": {
+      "post": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Submit Activity",
+        "description": "學生簽到；重複／並發提交回傳原記錄（TASK-252／253），訪客與老師被拒（TASK-255）。",
+        "operationId": "submit_activity_api_v1_classrooms__classroom_id__activities__activity_id__submissions_post",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          },
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Activity Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/me/result": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "My Activity Result",
+        "description": "學生查看本人提交；老師與未加入者被拒，訪客（未登入）401。",
+        "operationId": "my_activity_result_api_v1_classrooms__classroom_id__activities__activity_id__me_result_get",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          },
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Activity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2349,6 +2713,270 @@
           "courseName"
         ],
         "title": "ActiveClassroomResponse"
+      },
+      "ActivityCreateRequest": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "CHECKIN",
+              "SINGLE_CHOICE",
+              "MULTI_CHOICE",
+              "JUDGE",
+              "POLL"
+            ],
+            "title": "Type"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ActivityOption"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "correctOptionIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctoptionids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "ActivityCreateRequest",
+        "description": "建立活動；本期只開放 CHECKIN，其餘題型於 REQ-015 啟用。"
+      },
+      "ActivityItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "classroomId": {
+            "type": "string",
+            "title": "Classroomid"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ActivityOption"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "submissionCount": {
+            "type": "integer",
+            "title": "Submissioncount"
+          },
+          "participantCount": {
+            "type": "integer",
+            "title": "Participantcount"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedat"
+          },
+          "closedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closedat"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "mySubmission": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubmissionItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "classroomId",
+          "type",
+          "status",
+          "question",
+          "options",
+          "submissionCount",
+          "participantCount",
+          "publishedAt",
+          "closedAt",
+          "createdAt"
+        ],
+        "title": "ActivityItem"
+      },
+      "ActivityListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "openActivity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivityItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "openActivity"
+        ],
+        "title": "ActivityListResponse"
+      },
+      "ActivityOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 10,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "ActivityOption"
+      },
+      "ActivityResponse": {
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/ActivityItem"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activity"
+        ],
+        "title": "ActivityResponse"
+      },
+      "ActivityResultsResponse": {
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/ActivityItem"
+          },
+          "signed": {
+            "items": {
+              "$ref": "#/components/schemas/SignedStudent"
+            },
+            "type": "array",
+            "title": "Signed"
+          },
+          "unsigned": {
+            "items": {
+              "$ref": "#/components/schemas/UnsignedStudent"
+            },
+            "type": "array",
+            "title": "Unsigned"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activity",
+          "signed",
+          "unsigned"
+        ],
+        "title": "ActivityResultsResponse",
+        "description": "簽到結果（REQ-014）：已簽／未簽名單；答題統計於 REQ-016 擴充。"
       },
       "AnnotationCreateRequest": {
         "properties": {
@@ -3599,6 +4227,30 @@
         ],
         "title": "MembershipSummary"
       },
+      "MyResultResponse": {
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/ActivityItem"
+          },
+          "submission": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubmissionItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "activity",
+          "submission"
+        ],
+        "title": "MyResultResponse"
+      },
       "PageStateResponse": {
         "properties": {
           "classroomId": {
@@ -4298,6 +4950,120 @@
           "updatedAt"
         ],
         "title": "SharedReplyItem"
+      },
+      "SignedStudent": {
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "title": "Studentid"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Submittedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "studentId",
+          "displayName",
+          "submittedAt"
+        ],
+        "title": "SignedStudent"
+      },
+      "SubmissionCreateRequest": {
+        "properties": {
+          "answers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SubmissionCreateRequest",
+        "description": "學生提交；簽到不帶答案，答題於 REQ-015 啟用 answers。"
+      },
+      "SubmissionItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "activityId": {
+            "type": "string",
+            "title": "Activityid"
+          },
+          "studentId": {
+            "type": "string",
+            "title": "Studentid"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Submittedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "activityId",
+          "studentId",
+          "submittedAt"
+        ],
+        "title": "SubmissionItem"
+      },
+      "SubmissionResponse": {
+        "properties": {
+          "submission": {
+            "$ref": "#/components/schemas/SubmissionItem"
+          },
+          "alreadySubmitted": {
+            "type": "boolean",
+            "title": "Alreadysubmitted"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "submission",
+          "alreadySubmitted"
+        ],
+        "title": "SubmissionResponse"
+      },
+      "UnsignedStudent": {
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "title": "Studentid"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "studentId",
+          "displayName"
+        ],
+        "title": "UnsignedStudent"
       },
       "UploadCompleteRequest": {
         "properties": {

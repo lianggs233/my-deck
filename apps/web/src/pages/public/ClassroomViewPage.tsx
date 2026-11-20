@@ -12,13 +12,13 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core'
-import { IconWifi, IconWifiOff } from '@tabler/icons-react'
+import { IconCheckbox, IconWifi, IconWifiOff } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '../../api/http'
-import { annotationApi, classroomApi, sharedAnnotationApi } from '../../api/mvp'
+import { activityApi, annotationApi, classroomApi, sharedAnnotationApi } from '../../api/mvp'
 import { useAuth } from '../../auth/useAuth'
 import { SharedAnnotationLayer } from '../../components/ui/SharedAnnotationLayer'
 import { SlideCanvas } from '../../components/ui/SlideCanvas'
@@ -97,6 +97,27 @@ export function ClassroomViewPage() {
     void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
   }
 
+  // 課堂簽到（REQ-014）：僅學生身份查詢；訪客無簽到控件
+  const activitiesQuery = useQuery({
+    queryKey: ['activities', classroomId],
+    queryFn: () => activityApi.list(classroomId),
+    enabled: Boolean(isStudentParticipant),
+    refetchInterval: online && isStudentParticipant ? POLL_MS : false,
+  })
+  const openCheckin =
+    activitiesQuery.data?.openActivity?.type === 'CHECKIN'
+      ? activitiesQuery.data.openActivity
+      : undefined
+
+  const checkinMutation = useMutation({
+    mutationFn: (activityId: string) => activityApi.submit(classroomId, activityId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['activities', classroomId] })
+    },
+    onError: (cause) =>
+      showError(cause instanceof Error ? cause.message : '簽到失敗，請稍後再試。'),
+  })
+
   const createSharedMutation = useMutation({
     mutationFn: (input: { content: string; position?: AnnotationPosition; groupId?: string }) =>
       sharedAnnotationApi.create(classroomId, {
@@ -162,6 +183,7 @@ export function ClassroomViewPage() {
     const source = new EventSource(classroomApi.eventStreamUrl(classroomId, guestId))
     const onState = (event: MessageEvent) => {
       let isSharedEvent = false
+      let isActivityEvent = false
       try {
         const payload = JSON.parse(String(event.data)) as {
           stateVersion?: number
@@ -174,6 +196,7 @@ export function ClassroomViewPage() {
           return
         }
         isSharedEvent = payload.type === 'shared-annotation'
+        isActivityEvent = payload.type === 'activity'
       } catch {
         // 無法解析的事件不影響同步，仍以快照校正
       }
@@ -181,6 +204,11 @@ export function ClassroomViewPage() {
       if (isSharedEvent) {
         // 共享標註變更不影響頁碼版本，只重整共享層（REQ-011 即時同步）
         void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
+        return
+      }
+      if (isActivityEvent) {
+        // 簽到發布／結束／人數變更不影響頁碼版本，只重整活動（REQ-014 即時同步）
+        void queryClient.invalidateQueries({ queryKey: ['activities', classroomId] })
         return
       }
       void queryClient.invalidateQueries({
@@ -425,6 +453,39 @@ export function ClassroomViewPage() {
                   頁面由老師同步控制，你看到的是課堂目前頁。
                 </Text>
               )}
+
+              {isStudentParticipant && openCheckin && !ended ? (
+                openCheckin.mySubmission ? (
+                  <div className="md-notice" role="status">
+                    <IconCheckbox size={18} stroke={1.8} aria-hidden style={{ flexShrink: 0 }} />
+                    <Text fz={16} fw={600}>
+                      已完成簽到（
+                      {new Date(openCheckin.mySubmission.submittedAt).toLocaleTimeString('zh-TW', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                      ）
+                    </Text>
+                  </div>
+                ) : (
+                  <Paper radius="xl" bg="#FFFFFF" p="lg" style={{ border: '2px solid #12836F' }}>
+                    <Group justify="space-between" wrap="nowrap">
+                      <Text fz={16} fw={600} c="#17324D">
+                        老師發起了課堂簽到，請按「簽到」完成
+                      </Text>
+                      <Button
+                        color="teal"
+                        leftSection={<IconCheckbox size={16} aria-hidden />}
+                        loading={checkinMutation.isPending}
+                        disabled={!online}
+                        onClick={() => checkinMutation.mutate(openCheckin.id)}
+                      >
+                        簽到
+                      </Button>
+                    </Group>
+                  </Paper>
+                )
+              ) : null}
 
               {participant ? (
                 <Text fz={16} c="#5D7184" ta="center">

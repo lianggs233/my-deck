@@ -66,6 +66,8 @@ interface ApiFetchOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   /** JSON body（自動 stringify） */
   body?: unknown
+  /** 冪等鍵：同一操作的重試／雙擊帶同一 key，服務端重放原結果 */
+  idempotencyKey?: string
   /** 跳過 401 拋錯，回傳 null（用於 getCurrentUser） */
   allowUnauthorized?: boolean
   /** 內部使用：CSRF 重試標記 */
@@ -76,6 +78,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const method = options.method ?? 'GET'
   const headers: Record<string, string> = {}
   if (method !== 'GET') headers['x-csrf-token'] = await ensureCsrfToken()
+  if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey
   if (options.body !== undefined) headers['Content-Type'] = 'application/json'
 
   const response = await fetch(`${API_PREFIX}${path}`, {

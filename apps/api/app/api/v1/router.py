@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.routes import (
+    activities,
     annotations,
     auth,
     classrooms,
@@ -19,3 +20,4 @@ api_router.include_router(coursewares.router)
 api_router.include_router(annotations.router)
 api_router.include_router(classrooms.router)
 api_router.include_router(shared_annotations.router)
+api_router.include_router(activities.router)

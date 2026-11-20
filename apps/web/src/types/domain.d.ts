@@ -259,3 +259,45 @@ export interface SharePermissionStudent {
   displayName: string
   granted: boolean
 }
+
+/** 課堂活動類型（REQ-014 簽到；答題／投票於 REQ-015 啟用） */
+export type ActivityType = 'CHECKIN' | 'SINGLE_CHOICE' | 'MULTI_CHOICE' | 'JUDGE' | 'POLL'
+export type ActivityStatus = 'DRAFT' | 'OPEN' | 'CLOSED'
+
+export interface ActivitySubmission {
+  id: string
+  activityId: string
+  studentId: string
+  submittedAt: string
+}
+
+export interface ClassroomActivity {
+  id: string
+  classroomId: string
+  type: ActivityType
+  status: ActivityStatus
+  submissionCount: number
+  participantCount: number
+  publishedAt?: string
+  closedAt?: string
+  createdAt: string
+  /** 學生呼叫時附本人提交；老師／未提交為 undefined */
+  mySubmission?: ActivitySubmission
+}
+
+export interface ActivityListResult {
+  items: ClassroomActivity[]
+  openActivity?: ClassroomActivity
+}
+
+export interface SignedStudent {
+  studentId: string
+  displayName: string
+  submittedAt: string
+}
+
+export interface ActivityResults {
+  activity: ClassroomActivity
+  signed: SignedStudent[]
+  unsigned: { studentId: string; displayName: string }[]
+}

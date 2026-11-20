@@ -16,6 +16,7 @@ import {
   IconArrowLeft,
   IconChevronLeft,
   IconChevronRight,
+  IconClipboardCheck,
   IconCopy,
   IconListCheck,
   IconLock,
@@ -27,7 +28,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type MouseEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import { classroomApi, coursewareApi, sharedAnnotationApi } from '../../api/mvp'
+import { activityApi, classroomApi, coursewareApi, sharedAnnotationApi } from '../../api/mvp'
 import { useAuth } from '../../auth/useAuth'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
@@ -78,6 +79,8 @@ export function TeacherClassroomPage() {
   const [manageOpened, setManageOpened] = useState(false)
   const [manageFilter, setManageFilter] = useState<ManageFilter>('ALL')
   const [clearOpened, setClearOpened] = useState(false)
+  const [checkinConfirmOpened, setCheckinConfirmOpened] = useState(false)
+  const [checkinIdemKey, setCheckinIdemKey] = useState('')
 
   const classroomQuery = useQuery({
     queryKey: ['classroom', courseId, classroomId],
@@ -114,9 +117,36 @@ export function TeacherClassroomPage() {
     enabled: permissionOpened && Boolean(classroomId),
   })
 
+  // 課堂簽到（REQ-014）：SSE 觸發為主，3 秒輪詢補上即時人數
+  const activitiesQuery = useQuery({
+    queryKey: ['activities', classroomId],
+    queryFn: () => activityApi.list(classroomId),
+    enabled: Boolean(classroom),
+    refetchInterval: 3000,
+  })
+  const openActivity = activitiesQuery.data?.openActivity
+  const activityItems = activitiesQuery.data?.items ?? []
+  // 後端列表不保證排序，取 createdAt 最新者作為「上次簽到」
+  const latestActivity =
+    openActivity ??
+    activityItems.reduce<(typeof activityItems)[number] | undefined>(
+      (latest, item) => (!latest || item.createdAt > latest.createdAt ? item : latest),
+      undefined,
+    )
+  const checkinResultsQuery = useQuery({
+    queryKey: ['activity-results', classroomId, latestActivity?.id ?? ''],
+    queryFn: () => activityApi.results(classroomId, latestActivity?.id ?? ''),
+    enabled: Boolean(classroom) && latestActivity?.status === 'CLOSED',
+  })
+
   function invalidateShared() {
     void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
     void queryClient.invalidateQueries({ queryKey: ['shared-annotations-manage', classroomId] })
+  }
+
+  function invalidateActivities() {
+    void queryClient.invalidateQueries({ queryKey: ['activities', classroomId] })
+    void queryClient.invalidateQueries({ queryKey: ['activity-results', classroomId] })
   }
 
   // SSE 觸發器：學生留言／標註變更即時重整共享層（REQ-011 即時同步）；輪詢由查詢本身補上
@@ -131,6 +161,11 @@ export function TeacherClassroomPage() {
           void queryClient.invalidateQueries({
             queryKey: ['shared-annotations-manage', classroomId],
           })
+        }
+        if (payload.type === 'activity') {
+          // 學生簽到／活動狀態變更即時重整（REQ-014）
+          void queryClient.invalidateQueries({ queryKey: ['activities', classroomId] })
+          void queryClient.invalidateQueries({ queryKey: ['activity-results', classroomId] })
         }
       } catch {
         // 無法解析的事件不影響控制頁，重新整理時以伺服器資料為準
@@ -215,6 +250,24 @@ export function TeacherClassroomPage() {
       void queryClient.invalidateQueries({ queryKey: ['share-permissions', classroomId] })
     },
     onError: (cause) => showError(errorMessage(cause, '更新共享權限失敗。')),
+  })
+
+  // 發起簽到：建立（帶每次對話框一組冪等鍵，重試不重複建立）＋發布一氣呵成
+  const startCheckinMutation = useMutation({
+    mutationFn: async () => {
+      const created = await activityApi.create(classroomId, checkinIdemKey)
+      return activityApi.publish(classroomId, created.id)
+    },
+    onSuccess: () => {
+      invalidateActivities()
+      setCheckinConfirmOpened(false)
+    },
+    onError: (cause) => showError(errorMessage(cause, '發起簽到失敗，請稍後再試。')),
+  })
+  const closeCheckinMutation = useMutation({
+    mutationFn: (activityId: string) => activityApi.close(classroomId, activityId),
+    onSuccess: invalidateActivities,
+    onError: (cause) => showError(errorMessage(cause, '結束簽到失敗，請稍後再試。')),
   })
 
   const sharedBusy =
@@ -545,6 +598,95 @@ export function TeacherClassroomPage() {
             <Stack gap="md">
               <Group justify="space-between">
                 <Text fz={20} fw={700} c="#17324D">
+                  課堂簽到
+                </Text>
+                {openActivity ? (
+                  <Badge color="teal" variant="filled">
+                    進行中
+                  </Badge>
+                ) : null}
+              </Group>
+              {activitiesQuery.isPending ? (
+                <Loader aria-label="簽到載入中" mx="auto" />
+              ) : openActivity ? (
+                <>
+                  <Text fz={16} c="#17324D">
+                    已簽到{' '}
+                    <Text component="span" fz={24} fw={700} c="#12836F">
+                      {openActivity.submissionCount}
+                    </Text>{' '}
+                    / {openActivity.participantCount} 人
+                  </Text>
+                  <Button
+                    variant="default"
+                    styles={secondaryButton}
+                    leftSection={<IconClipboardCheck size={16} aria-hidden />}
+                    loading={closeCheckinMutation.isPending}
+                    onClick={() => closeCheckinMutation.mutate(openActivity.id)}
+                  >
+                    結束簽到
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    leftSection={<IconClipboardCheck size={16} aria-hidden />}
+                    onClick={() => {
+                      setCheckinIdemKey(crypto.randomUUID())
+                      setCheckinConfirmOpened(true)
+                    }}
+                  >
+                    發起簽到
+                  </Button>
+                  {latestActivity?.status === 'CLOSED' ? (
+                    checkinResultsQuery.isPending ? (
+                      <Loader aria-label="簽到結果載入中" mx="auto" />
+                    ) : checkinResultsQuery.data ? (
+                      <Stack gap={6} mah={260} style={{ overflowY: 'auto' }}>
+                        <Text fz={16} fw={600} c="#17324D">
+                          上次簽到：已簽 {checkinResultsQuery.data.signed.length} 人，未簽{' '}
+                          {checkinResultsQuery.data.unsigned.length} 人
+                        </Text>
+                        <Text fz={14} fw={600} c="#17324D">
+                          已簽到
+                        </Text>
+                        {checkinResultsQuery.data.signed.length === 0 ? (
+                          <Text fz={14} c="#5D7184">
+                            無
+                          </Text>
+                        ) : (
+                          checkinResultsQuery.data.signed.map((student) => (
+                            <Text key={student.studentId} fz={14} c="#5D7184">
+                              {student.displayName}・
+                              {new Date(student.submittedAt).toLocaleTimeString('zh-TW', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </Text>
+                          ))
+                        )}
+                        <Text fz={14} fw={600} c="#17324D">
+                          未簽到
+                        </Text>
+                        <Text fz={14} c="#5D7184">
+                          {checkinResultsQuery.data.unsigned.length === 0
+                            ? '無'
+                            : checkinResultsQuery.data.unsigned
+                                .map((student) => student.displayName)
+                                .join('、')}
+                        </Text>
+                      </Stack>
+                    ) : null
+                  ) : null}
+                </>
+              )}
+            </Stack>
+          </Paper>
+
+          <Paper radius="xl" bg="#FFFFFF" p="xl" style={{ border: '1px solid #D8E2E8' }}>
+            <Stack gap="md">
+              <Group justify="space-between">
+                <Text fz={20} fw={700} c="#17324D">
                   共享標註
                 </Text>
                 <Text fz={14} c="#5D7184">
@@ -750,6 +892,17 @@ export function TeacherClassroomPage() {
         danger
         loading={clearPageMutation.isPending}
         onConfirm={() => clearPageMutation.mutate()}
+      />
+
+      <ConfirmDialog
+        opened={checkinConfirmOpened}
+        onClose={() => setCheckinConfirmOpened(false)}
+        title="發起課堂簽到？"
+        message="發起後，已加入課堂的學生可立即簽到；同一時間只會有一個進行中的活動。"
+        confirmLabel="發起簽到"
+        cancelLabel="取消"
+        loading={startCheckinMutation.isPending}
+        onConfirm={() => startCheckinMutation.mutate()}
       />
     </Stack>
   )

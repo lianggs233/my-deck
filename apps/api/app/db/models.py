@@ -373,3 +373,49 @@ class ClassroomShareGrant(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
+
+
+class ClassroomActivity(Base):
+    """課堂活動（REQ-014 簽到；REQ-015 答題／投票）；同課堂同時只允許一個 OPEN（部分唯一索引）。"""
+
+    __tablename__ = "classroom_activities"
+    __table_args__ = (
+        Index(
+            "uq_activity_open_classroom",
+            "classroom_id",
+            unique=True,
+            sqlite_where=text("status = 'OPEN'"),
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    classroom_id: Mapped[str] = mapped_column(String(40), ForeignKey("classrooms.id"), index=True)
+    # CHECKIN / SINGLE_CHOICE / MULTI_CHOICE / JUDGE / POLL
+    type: Mapped[str] = mapped_column(String(20))
+    # DRAFT / OPEN / CLOSED
+    status: Mapped[str] = mapped_column(String(10), default="DRAFT", index=True)
+    question: Mapped[str | None] = mapped_column(String(200), nullable=True, default=None)
+    options_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    correct_option_ids_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    created_by: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"))
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ActivitySubmission(Base):
+    """活動提交（REQ-014 簽到記錄／REQ-015 答案）：每生每活動最多一條有效記錄（唯一約束兜底）。"""
+
+    __tablename__ = "activity_submissions"
+    __table_args__ = (
+        UniqueConstraint("activity_id", "student_id", name="uq_submission_activity_student"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    activity_id: Mapped[str] = mapped_column(
+        String(40), ForeignKey("classroom_activities.id"), index=True
+    )
+    classroom_id: Mapped[str] = mapped_column(String(40), ForeignKey("classrooms.id"), index=True)
+    student_id: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"), index=True)
+    answers_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

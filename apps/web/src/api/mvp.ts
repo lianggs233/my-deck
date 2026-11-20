@@ -2,10 +2,15 @@ import type { components } from './schema'
 import { apiFetch, apiPutRaw, sha256Hex } from './http'
 import type {
   ActiveClassroom,
+  ActivityListResult,
+  ActivityResults,
+  ActivitySubmission,
+  ActivityType,
   Annotation,
   AnnotationPosition,
   AuthSession,
   Classroom,
+  ClassroomActivity,
   ClassroomDetail,
   ClassroomJoinInfo,
   ClassroomJoinResult,
@@ -698,5 +703,118 @@ export const sharedAnnotationApi = {
       method: 'PUT',
       body: { granted },
     })
+  },
+}
+
+type ApiActivityItem = Schemas['ActivityItem']
+type ApiActivityListResponse = Schemas['ActivityListResponse']
+type ApiActivityResponse = Schemas['ActivityResponse']
+type ApiActivityResultsResponse = Schemas['ActivityResultsResponse']
+type ApiSubmissionItem = Schemas['SubmissionItem']
+type ApiSubmissionResponse = Schemas['SubmissionResponse']
+type ApiMyResultResponse = Schemas['MyResultResponse']
+
+function toSubmission(item: ApiSubmissionItem): ActivitySubmission {
+  return {
+    id: item.id,
+    activityId: item.activityId,
+    studentId: item.studentId,
+    submittedAt: item.submittedAt,
+  }
+}
+
+function toActivity(item: ApiActivityItem): ClassroomActivity {
+  return {
+    id: item.id,
+    classroomId: item.classroomId,
+    type: item.type as ActivityType,
+    status: item.status as ClassroomActivity['status'],
+    submissionCount: item.submissionCount,
+    participantCount: item.participantCount,
+    publishedAt: item.publishedAt ?? undefined,
+    closedAt: item.closedAt ?? undefined,
+    createdAt: item.createdAt,
+    mySubmission: item.mySubmission ? toSubmission(item.mySubmission) : undefined,
+  }
+}
+
+export const activityApi = {
+  /** 建立簽到活動（DRAFT）；帶 Idempotency-Key 防重複建立 */
+  async create(classroomId: string, idempotencyKey: string): Promise<ClassroomActivity> {
+    const data = await apiFetch<ApiActivityResponse>(`/classrooms/${classroomId}/activities`, {
+      method: 'POST',
+      body: { type: 'CHECKIN' },
+      idempotencyKey,
+    })
+    return toActivity(data.activity)
+  },
+
+  /** 發布活動（DRAFT→OPEN）；重複發布回 200 原狀態 */
+  async publish(classroomId: string, activityId: string): Promise<ClassroomActivity> {
+    const data = await apiFetch<ApiActivityResponse>(
+      `/classrooms/${classroomId}/activities/${activityId}/publish`,
+      { method: 'POST' },
+    )
+    return toActivity(data.activity)
+  },
+
+  /** 結束活動（OPEN→CLOSED）；重複結束回 200 原結果 */
+  async close(classroomId: string, activityId: string): Promise<ClassroomActivity> {
+    const data = await apiFetch<ApiActivityResponse>(
+      `/classrooms/${classroomId}/activities/${activityId}/close`,
+      { method: 'POST' },
+    )
+    return toActivity(data.activity)
+  },
+
+  /** 課堂活動列表＋目前開放中的活動 */
+  async list(classroomId: string): Promise<ActivityListResult> {
+    const data = await apiFetch<ApiActivityListResponse>(`/classrooms/${classroomId}/activities`)
+    return {
+      items: data.items.map(toActivity),
+      openActivity: data.openActivity ? toActivity(data.openActivity) : undefined,
+    }
+  },
+
+  /** 簽到結果：已簽／未簽名單（僅負責老師） */
+  async results(classroomId: string, activityId: string): Promise<ActivityResults> {
+    const data = await apiFetch<ApiActivityResultsResponse>(
+      `/classrooms/${classroomId}/activities/${activityId}/results`,
+    )
+    return {
+      activity: toActivity(data.activity),
+      signed: data.signed.map((s) => ({
+        studentId: s.studentId,
+        displayName: s.displayName,
+        submittedAt: s.submittedAt,
+      })),
+      unsigned: data.unsigned.map((s) => ({ studentId: s.studentId, displayName: s.displayName })),
+    }
+  },
+
+  /** 學生簽到；重複提交回 alreadySubmitted=true 原記錄 */
+  async submit(
+    classroomId: string,
+    activityId: string,
+  ): Promise<{ submission: ActivitySubmission; alreadySubmitted: boolean }> {
+    const data = await apiFetch<ApiSubmissionResponse>(
+      `/classrooms/${classroomId}/activities/${activityId}/submissions`,
+      { method: 'POST', body: {} },
+    )
+    return { submission: toSubmission(data.submission), alreadySubmitted: data.alreadySubmitted }
+  },
+
+  /** 學生本人提交結果 */
+  async myResult(
+    classroomId: string,
+    activityId: string,
+  ): Promise<{ activity: ClassroomActivity; submission?: ActivitySubmission }> {
+    const data = await apiFetch<ApiMyResultResponse>(
+      `/classrooms/${classroomId}/activities/${activityId}/me/result`,
+    )
+    return {
+      activity: toActivity(data.activity),
+      submission: data.submission ? toSubmission(data.submission) : undefined,
+    }
   },
 }

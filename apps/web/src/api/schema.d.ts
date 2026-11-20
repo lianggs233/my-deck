@@ -808,6 +808,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/classrooms/{classroom_id}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Activities
+         * @description 活動列表：老師與已加入學生可查；訪客 403、未登入 401（不泄露其他課堂資料）。
+         */
+        get: operations["list_activities_api_v1_classrooms__classroom_id__activities_get"];
+        put?: never;
+        /**
+         * Create Activity
+         * @description 老師建立活動（本期僅簽到）；Idempotency-Key 重放回原活動（TASK-249）。
+         */
+        post: operations["create_activity_api_v1_classrooms__classroom_id__activities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish Activity
+         * @description 發布活動；同課堂同時只允許一個 OPEN；重複發布回原狀態（TASK-249／258）。
+         */
+        post: operations["publish_activity_api_v1_classrooms__classroom_id__activities__activity_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close Activity
+         * @description 結束活動；重複結束回原結果（TASK-258），結束後遲交一律被拒。
+         */
+        post: operations["close_activity_api_v1_classrooms__classroom_id__activities__activity_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Activity Results
+         * @description 老師查看簽到結果：已簽／未簽名單，由原始提交即時重算（TASK-256）。
+         */
+        get: operations["activity_results_api_v1_classrooms__classroom_id__activities__activity_id__results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Activity
+         * @description 學生簽到；重複／並發提交回傳原記錄（TASK-252／253），訪客與老師被拒（TASK-255）。
+         */
+        post: operations["submit_activity_api_v1_classrooms__classroom_id__activities__activity_id__submissions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/classrooms/{classroom_id}/activities/{activity_id}/me/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Activity Result
+         * @description 學生查看本人提交；老師與未加入者被拒，訪客（未登入）401。
+         */
+        get: operations["my_activity_result_api_v1_classrooms__classroom_id__activities__activity_id__me_result_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -817,6 +941,80 @@ export interface components {
             classroom?: components["schemas"]["ClassroomLiveState"] | null;
             /** Coursename */
             courseName: string;
+        };
+        /**
+         * ActivityCreateRequest
+         * @description 建立活動；本期只開放 CHECKIN，其餘題型於 REQ-015 啟用。
+         */
+        ActivityCreateRequest: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "CHECKIN" | "SINGLE_CHOICE" | "MULTI_CHOICE" | "JUDGE" | "POLL";
+            /** Question */
+            question?: string | null;
+            /** Options */
+            options?: components["schemas"]["ActivityOption"][] | null;
+            /** Correctoptionids */
+            correctOptionIds?: string[] | null;
+        };
+        /** ActivityItem */
+        ActivityItem: {
+            /** Id */
+            id: string;
+            /** Classroomid */
+            classroomId: string;
+            /** Type */
+            type: string;
+            /** Status */
+            status: string;
+            /** Question */
+            question: string | null;
+            /** Options */
+            options: components["schemas"]["ActivityOption"][] | null;
+            /** Submissioncount */
+            submissionCount: number;
+            /** Participantcount */
+            participantCount: number;
+            /** Publishedat */
+            publishedAt: string | null;
+            /** Closedat */
+            closedAt: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            mySubmission?: components["schemas"]["SubmissionItem"] | null;
+        };
+        /** ActivityListResponse */
+        ActivityListResponse: {
+            /** Items */
+            items: components["schemas"]["ActivityItem"][];
+            openActivity: components["schemas"]["ActivityItem"] | null;
+        };
+        /** ActivityOption */
+        ActivityOption: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+        };
+        /** ActivityResponse */
+        ActivityResponse: {
+            activity: components["schemas"]["ActivityItem"];
+        };
+        /**
+         * ActivityResultsResponse
+         * @description 簽到結果（REQ-014）：已簽／未簽名單；答題統計於 REQ-016 擴充。
+         */
+        ActivityResultsResponse: {
+            activity: components["schemas"]["ActivityItem"];
+            /** Signed */
+            signed: components["schemas"]["SignedStudent"][];
+            /** Unsigned */
+            unsigned: components["schemas"]["UnsignedStudent"][];
         };
         /** AnnotationCreateRequest */
         AnnotationCreateRequest: {
@@ -1260,6 +1458,11 @@ export interface components {
             /** Teachername */
             teacherName: string;
         };
+        /** MyResultResponse */
+        MyResultResponse: {
+            activity: components["schemas"]["ActivityItem"];
+            submission: components["schemas"]["SubmissionItem"] | null;
+        };
         /** PageStateResponse */
         PageStateResponse: {
             /** Classroomid */
@@ -1506,6 +1709,53 @@ export interface components {
              * Format: date-time
              */
             updatedAt: string;
+        };
+        /** SignedStudent */
+        SignedStudent: {
+            /** Studentid */
+            studentId: string;
+            /** Displayname */
+            displayName: string;
+            /**
+             * Submittedat
+             * Format: date-time
+             */
+            submittedAt: string;
+        };
+        /**
+         * SubmissionCreateRequest
+         * @description 學生提交；簽到不帶答案，答題於 REQ-015 啟用 answers。
+         */
+        SubmissionCreateRequest: {
+            /** Answers */
+            answers?: string[] | null;
+        };
+        /** SubmissionItem */
+        SubmissionItem: {
+            /** Id */
+            id: string;
+            /** Activityid */
+            activityId: string;
+            /** Studentid */
+            studentId: string;
+            /**
+             * Submittedat
+             * Format: date-time
+             */
+            submittedAt: string;
+        };
+        /** SubmissionResponse */
+        SubmissionResponse: {
+            submission: components["schemas"]["SubmissionItem"];
+            /** Alreadysubmitted */
+            alreadySubmitted: boolean;
+        };
+        /** UnsignedStudent */
+        UnsignedStudent: {
+            /** Studentid */
+            studentId: string;
+            /** Displayname */
+            displayName: string;
         };
         /** UploadCompleteRequest */
         UploadCompleteRequest: {
@@ -3107,6 +3357,236 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SharePermissionStudent"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_activities_api_v1_classrooms__classroom_id__activities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_activity_api_v1_classrooms__classroom_id__activities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_activity_api_v1_classrooms__classroom_id__activities__activity_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_activity_api_v1_classrooms__classroom_id__activities__activity_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activity_results_api_v1_classrooms__classroom_id__activities__activity_id__results_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResultsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_activity_api_v1_classrooms__classroom_id__activities__activity_id__submissions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmissionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_activity_result_api_v1_classrooms__classroom_id__activities__activity_id__me_result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyResultResponse"];
                 };
             };
             /** @description Validation Error */

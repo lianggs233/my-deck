@@ -52,7 +52,7 @@ export function StudentHomePage() {
   const memberships = membershipsQuery.data?.items ?? []
 
   return (
-    <Stack gap={48}>
+    <Stack gap={32}>
       <div>
         <Title order={1} c="#17324D">
           學習中心

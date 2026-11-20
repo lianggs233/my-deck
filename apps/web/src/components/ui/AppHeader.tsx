@@ -32,7 +32,7 @@ export function AppHeader() {
       h={96}
       style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}
     >
-      <Group justify="space-between" w="100%" px={16} wrap="nowrap">
+      <Group justify="space-between" w="100%" px={32} wrap="nowrap">
         <UnstyledButton onClick={() => navigate(homePath(user.role))} aria-label="回到首頁">
           <BrandMark variant="light" />
         </UnstyledButton>

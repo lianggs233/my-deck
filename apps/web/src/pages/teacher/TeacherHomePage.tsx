@@ -66,7 +66,7 @@ export function TeacherHomePage() {
   const courses = coursesQuery.data?.items ?? []
 
   return (
-    <Stack gap={48}>
+    <Stack gap={32}>
       <div>
         <Title order={1} c="#17324D">
           我的課程

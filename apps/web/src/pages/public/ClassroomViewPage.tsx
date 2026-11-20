@@ -355,7 +355,7 @@ export function ClassroomViewPage() {
       <Box
         component="header"
         bg="#FFFFFF"
-        px={16}
+        px={32}
         h={96}
         style={{
           display: 'flex',

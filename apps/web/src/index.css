@@ -12,7 +12,6 @@
   --md-hairline: #dce6ea;
 
   /* 版式 */
-  --md-content-width: 82rem;
   --md-header-height: 6rem;
   --md-card-radius: 1.5rem;
   --md-control-height: 3.5rem;
@@ -54,12 +53,10 @@ a:hover {
   min-height: 100vh;
 }
 
-/* 內頁內容容器：寬 1312 置中 */
+/* 內頁內容容器：填滿視窗寬度，上下左右邊緣留白最多 2rem（2026-11-20 確認） */
 .md-container {
   width: 100%;
-  max-width: var(--md-content-width);
-  margin-inline: auto;
-  padding-inline: 1rem;
+  padding-inline: 2rem;
 }
 
 /* 全螢幕版式外殼：主頁面（視窗）不出現滾動條，只在內容區內滾動 */

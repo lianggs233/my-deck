@@ -41,9 +41,9 @@ export function StatusPage() {
   const isHealthy = healthQuery.isSuccess
 
   return (
-    <Box component="main" py="xl">
+    <Box component="main" py="lg">
       <Container size="lg">
-        <Stack gap="xl">
+        <Stack gap="lg">
           <Group justify="space-between" align="center">
             <Group gap="sm">
               <ThemeIcon size={40} radius="md" variant="light" color="teal">

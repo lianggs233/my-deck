@@ -22,7 +22,7 @@ export function ProtectedRoute({ allowedRole, children }: ProtectedRouteProps) {
   return <>{children}</>
 }
 
-/** 內頁版式：白頂欄 + Paper 內容區（寬 1312 置中） */
+/** 內頁版式：白頂欄 + Paper 內容區（填滿寬度，邊緣留白 2rem） */
 export function AppLayout() {
   const { user } = useAuth()
 
@@ -37,7 +37,7 @@ export function AppLayout() {
     >
       <AppHeader />
       <Box component="div" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-        <Box className="md-container" py={48}>
+        <Box className="md-container" py={32}>
           <Outlet />
         </Box>
       </Box>

@@ -429,12 +429,12 @@ export function TeacherClassroomPage() {
         meta={`${classroomQuery.data.courseName} · 第 ${classroom.pageIndex + 1} / ${classroom.pageCount} 頁`}
       />
 
-      <Group align="flex-start" gap="lg" wrap="wrap">
+      <Group align="flex-start" gap="lg" wrap="nowrap">
         <Paper
           radius="xl"
           bg="#FFFFFF"
           p="xl"
-          style={{ border: '1px solid #D8E2E8', flex: '1 1 40rem' }}
+          style={{ border: '1px solid #D8E2E8', flex: '1 1 auto', minWidth: 0 }}
         >
           <Stack gap="lg">
             <SlideCanvas

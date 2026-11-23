@@ -73,8 +73,12 @@ export function ClassroomViewPage() {
   const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement))
   /** 進入課堂後只嘗試一次預設全屏（瀏覽器要求使用者手勢，被阻擋時靜默降級） */
   const fullscreenTriedRef = useRef(false)
-  /** 投影片全屏目標：只放大投影片（含標註層），不含頂欄與其他卡片 */
-  const slideFsRef = useRef<HTMLDivElement>(null)
+  /** 投影片全屏目標：只放大投影片（含標註層），不含頂欄與其他卡片。
+   *  以 state 保存元素：標註相關彈層（Modal／Popover／Tooltip）須 portal 到此容器內，
+   *  否則全屏時 portal 到 body 的彈層在全屏元素之外無法渲染 */
+  const [slideFsEl, setSlideFsEl] = useState<HTMLDivElement | null>(null)
+  /** 全屏時彈層的 portal 目標；非全屏或元素未掛載時回退預設（body） */
+  const popupPortalProps = slideFsEl ? { target: slideFsEl } : undefined
   /** 已確認的最新狀態版本：較舊的推送事件直接忽略，不回退到舊頁（TASK-141） */
   const stateVersionRef = useRef(0)
 
@@ -261,13 +265,13 @@ export function ClassroomViewPage() {
 
   // 進入課堂後嘗試預設全屏一次（瀏覽器要求使用者手勢；被阻擋時靜默降級，可用「全屏顯示」手動進入）
   useEffect(() => {
-    if (fullscreenTriedRef.current || !snapshot) return
+    if (fullscreenTriedRef.current || !snapshot || !slideFsEl) return
     fullscreenTriedRef.current = true
-    void slideFsRef.current?.requestFullscreen?.().catch(() => undefined)
-  }, [snapshot])
+    void slideFsEl.requestFullscreen?.().catch(() => undefined)
+  }, [snapshot, slideFsEl])
 
   const enterFullscreen = () => {
-    void slideFsRef.current?.requestFullscreen?.().catch(() => undefined)
+    void slideFsEl?.requestFullscreen?.().catch(() => undefined)
   }
 
   /** 暫離：確認後先退出全屏再離開；學生回其首頁、訪客回加入頁 */
@@ -328,7 +332,12 @@ export function ClassroomViewPage() {
   const annotationDots = isStudentParticipant ? (
     <>
       {annotations.map((annotation) => (
-        <Tooltip key={annotation.id} label={annotation.content} withArrow>
+        <Tooltip
+          key={annotation.id}
+          label={annotation.content}
+          withArrow
+          portalProps={popupPortalProps}
+        >
           <Box
             component="button"
             type="button"
@@ -478,7 +487,7 @@ export function ClassroomViewPage() {
           {data && snapshot && !blockingError ? (
             <Stack gap="lg">
               <Paper radius="lg" bg="#FFFFFF" p="md" style={{ border: '1px solid #D8E2E8' }}>
-                <div ref={slideFsRef} className="md-slide-fs">
+                <div ref={setSlideFsEl} className="md-slide-fs">
                   <SlideCanvas
                     pageNumber={snapshot.pageIndex + 1}
                     totalPages={snapshot.pageCount}
@@ -519,6 +528,7 @@ export function ClassroomViewPage() {
                             currentUserId={user?.id ?? ''}
                             isTeacher={false}
                             busy={sharedBusy}
+                            portalTarget={slideFsEl}
                             onAddComment={(groupId, content) =>
                               createSharedMutation.mutate({ groupId, content })
                             }
@@ -619,6 +629,7 @@ export function ClassroomViewPage() {
         onClose={() => setDraftPosition(null)}
         title="新增共享標註"
         centered
+        portalProps={popupPortalProps}
       >
         <Stack gap="md">
           <TextInput

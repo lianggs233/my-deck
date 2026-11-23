@@ -129,7 +129,20 @@ a:hover {
   align-items: center;
   justify-content: center;
 }
+
 .md-slide-fs:fullscreen > section {
   width: 100%;
   max-width: calc(100vh * 16 / 9);
 }
+
+/* 全屏時標註彈層 portal 進 .md-slide-fs（body 上的彈層在全屏元素外不可見）。
+   Mantine Modal inner/overlay 只設 top/bottom、left/right 靠 static position；
+   全屏容器是 flex，portal 節點的 static position 會被排到 section 右側，
+   必須顯示補上 left/right: 0（fixed 定位的包含塊是全屏元素，無副作用） */
+/* stylelint-disable selector-class-pattern -- Mantine 靜態類名非 kebab-case */
+.md-slide-fs .mantine-Modal-inner,
+.md-slide-fs .mantine-Modal-overlay {
+  left: 0;
+  right: 0;
+}
+/* stylelint-enable selector-class-pattern */

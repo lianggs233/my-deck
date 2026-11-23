@@ -31,6 +31,9 @@ interface SharedAnnotationLayerProps {
   onDeleteReply: (reply: SharedReply) => void
   /** 老師管理：隱藏／顯示單則留言（學生看不到 HIDDEN） */
   onToggleVisibility?: (annotation: SharedAnnotation) => void
+  /** Popover 彈層 portal 目標（觀看頁投影片全屏容器；全屏時 body 上的彈層不可見）。
+   *  未提供時維持預設 portal 到 body（如老師授課控制頁無全屏） */
+  portalTarget?: HTMLElement | null
 }
 
 function formatTime(iso: string): string {
@@ -317,6 +320,7 @@ export function SharedAnnotationLayer({
   onEditReply,
   onDeleteReply,
   onToggleVisibility,
+  portalTarget,
 }: SharedAnnotationLayerProps) {
   // 依 groupId 聚合（建立時間早→晚已由服務端排序）
   const groups = new Map<string, SharedAnnotation[]>()
@@ -331,7 +335,14 @@ export function SharedAnnotationLayer({
       {[...groups.entries()].map(([groupId, items]) => {
         const first = items[0]
         return (
-          <Popover key={groupId} width={360} position="right-start" withArrow shadow="md">
+          <Popover
+            key={groupId}
+            width={360}
+            position="right-start"
+            withArrow
+            shadow="md"
+            portalProps={portalTarget ? { target: portalTarget } : undefined}
+          >
             <Popover.Target>
               <button
                 type="button"

@@ -510,7 +510,12 @@ async def serve_media(object_key: str, user: CurrentUser, db: DbDep) -> FileResp
     path = upload_object_path(object_key)
     if not path.exists():
         raise ApiError(404, "MEDIA_NOT_FOUND", "資源不存在。")
-    return FileResponse(path, media_type="image/webp")
+    # 頁圖內容按轉換 attempt 隔離且永不變更：可長效快取（仍需登入授權，故 private）
+    return FileResponse(
+        path,
+        media_type="image/webp",
+        headers={"Cache-Control": "private, max-age=86400, immutable"},
+    )
 
 
 # 保留給註解路由使用的查詢工具。

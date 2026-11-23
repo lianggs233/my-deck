@@ -97,6 +97,8 @@ class ClassroomSnapshot(ApiModel):
     status: str
     page_image_url: str | None = None
     page_thumb_url: str | None = None
+    # 相鄰頁（後兩頁＋前一頁）圖片位址：學生端預取，老師翻頁時立即顯示（REQ-008 延遲優化）
+    prefetch_image_urls: list[str] = Field(default_factory=list)
 
 
 class ClassroomJoinRequest(ApiModel):

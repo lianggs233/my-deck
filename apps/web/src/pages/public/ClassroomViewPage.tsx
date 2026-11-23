@@ -12,19 +12,32 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core'
-import { IconCheckbox, IconWifi, IconWifiOff } from '@tabler/icons-react'
+import {
+  IconCheckbox,
+  IconDoorExit,
+  IconMaximize,
+  IconWifi,
+  IconWifiOff,
+} from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { ApiError } from '../../api/http'
 import { activityApi, annotationApi, classroomApi, sharedAnnotationApi } from '../../api/mvp'
 import { useAuth } from '../../auth/useAuth'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SharedAnnotationLayer } from '../../components/ui/SharedAnnotationLayer'
 import { SlideCanvas } from '../../components/ui/SlideCanvas'
 import { StatusPill } from '../../components/ui/StatusPill'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
-import type { AnnotationPosition, SharedAnnotation } from '../../types/domain'
+import { useClassroomChannel } from '../../hooks/useClassroomChannel'
+import { homePath } from '../../utils/home-path'
+import type {
+  AnnotationPosition,
+  ClassroomSnapshotResult,
+  SharedAnnotation,
+} from '../../types/domain'
 
 /** 輪詢週期（毫秒）；SSE 事件為即時觸發，輪詢作斷線重連與兼容 */
 const POLL_MS = 3000
@@ -50,18 +63,80 @@ export function ClassroomViewPage() {
   const queryClient = useQueryClient()
   const { showError } = useErrorAlert()
   const { user } = useAuth()
-  const [live, setLive] = useState(false)
+  const navigate = useNavigate()
   const [online, setOnline] = useState(() => navigator.onLine)
   const [draftPosition, setDraftPosition] = useState<AnnotationPosition | null>(null)
   const [newContent, setNewContent] = useState('')
-  /** 已確認的最新狀態版本：較舊的 SSE 事件直接忽略，不回退到舊頁（TASK-141） */
+  /** 暫離確認對話框 */
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
+  /** 瀏覽器全屏狀態（Esc 等預設行為退出時由 fullscreenchange 同步） */
+  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement))
+  /** 進入課堂後只嘗試一次預設全屏（瀏覽器要求使用者手勢，被阻擋時靜默降級） */
+  const fullscreenTriedRef = useRef(false)
+  /** 已確認的最新狀態版本：較舊的推送事件直接忽略，不回退到舊頁（TASK-141） */
   const stateVersionRef = useRef(0)
+
+  // 即時通道：優先 WebSocket，降級 SSE，心跳逾時再降級輪詢（REQ-008 延遲優化）
+  const channel = useClassroomChannel({
+    classroomId,
+    guestId,
+    enabled: Boolean(classroomId),
+    onEvent: (payload) => {
+      const stateVersion =
+        typeof payload.stateVersion === 'number' ? payload.stateVersion : undefined
+      if (stateVersion !== undefined && stateVersion < stateVersionRef.current) {
+        return
+      }
+      if (payload.type === 'shared-annotation') {
+        // 共享標註變更不影響頁碼版本，只重整共享層（REQ-011 即時同步）
+        void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
+        return
+      }
+      if (payload.type === 'activity') {
+        // 簽到發布／結束／人數變更不影響頁碼版本，只重整活動（REQ-014 即時同步）
+        void queryClient.invalidateQueries({ queryKey: ['activities', classroomId] })
+        return
+      }
+      if (stateVersion === undefined) return
+      stateVersionRef.current = stateVersion
+      // 翻頁事件直接附新頁圖片位址：立即更新快取換頁，不等快照往返（REQ-008 延遲優化）
+      queryClient.setQueryData<ClassroomSnapshotResult>(
+        ['classroom-snapshot', classroomId, guestId],
+        (previous) =>
+          previous
+            ? {
+                ...previous,
+                snapshot: {
+                  ...previous.snapshot,
+                  pageIndex:
+                    typeof payload.pageIndex === 'number'
+                      ? payload.pageIndex
+                      : previous.snapshot.pageIndex,
+                  pageCount:
+                    typeof payload.pageCount === 'number'
+                      ? payload.pageCount
+                      : previous.snapshot.pageCount,
+                  stateVersion,
+                  pageImageUrl:
+                    typeof payload.pageImageUrl === 'string'
+                      ? payload.pageImageUrl
+                      : previous.snapshot.pageImageUrl,
+                },
+              }
+            : previous,
+      )
+      // 仍以權威快照校正（預取清單、課堂狀態等），不阻擋上面的即時換頁
+      void queryClient.invalidateQueries({ queryKey: ['classroom-snapshot', classroomId, guestId] })
+    },
+  })
+  const live = channel.live
 
   const snapshotQuery = useQuery({
     queryKey: ['classroom-snapshot', classroomId, guestId],
     queryFn: () => classroomApi.snapshot(classroomId, guestId),
     enabled: Boolean(classroomId),
-    refetchInterval: online ? POLL_MS : false,
+    // 推送通道失效時加密輪詢補上即時性；正常時 3 秒輪詢作後備
+    refetchInterval: online ? (live ? POLL_MS : POLL_MS / 2) : false,
   })
 
   const data = snapshotQuery.data
@@ -84,11 +159,13 @@ export function ClassroomViewPage() {
   })
   const annotations = annotationsQuery.data ?? []
 
-  // 共享標註層（REQ-011／012）：學生可見 VISIBLE 項目；訪客不查詢不顯示
+  // 共享標註層（REQ-011／012）：學生可見 VISIBLE 項目；訪客不查詢不顯示；
+  // 推送通道失效（降級輪詢）時開 3 秒輪詢兜底，避免只自己看得到變更
   const sharedQuery = useQuery({
     queryKey: ['shared-annotations', classroomId, snapshot?.pageIndex ?? 0],
     queryFn: () => sharedAnnotationApi.list(classroomId, snapshot?.pageIndex ?? 0),
     enabled: Boolean(isStudentParticipant && snapshot),
+    refetchInterval: online && !live ? POLL_MS : false,
   })
   const sharedItems = sharedQuery.data?.items ?? []
   const canShare = Boolean(sharedQuery.data?.canShare) && !ended && online
@@ -173,6 +250,33 @@ export function ClassroomViewPage() {
     }
   }, [classroomId, guestId, queryClient])
 
+  // 全屏狀態追蹤：Esc 等瀏覽器預設退出方式由 fullscreenchange 同步到按鈕顯示
+  useEffect(() => {
+    const handleFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
+  // 進入課堂後嘗試預設全屏一次（瀏覽器要求使用者手勢；被阻擋時靜默降級，可用「全屏顯示」手動進入）
+  useEffect(() => {
+    if (fullscreenTriedRef.current || !snapshot) return
+    fullscreenTriedRef.current = true
+    void document.documentElement.requestFullscreen?.().catch(() => undefined)
+  }, [snapshot])
+
+  const enterFullscreen = () => {
+    void document.documentElement.requestFullscreen?.().catch(() => undefined)
+  }
+
+  /** 暫離：確認後先退出全屏再離開；學生回其首頁、訪客回加入頁 */
+  const handleLeaveConfirm = () => {
+    setLeaveConfirmOpen(false)
+    const exit = document.fullscreenElement
+      ? document.exitFullscreen().catch(() => undefined)
+      : Promise.resolve()
+    void exit.finally(() => navigate(user ? homePath(user.role) : '/join'))
+  }
+
   // 記錄已確認的最新狀態版本（只升不降）
   const confirmedVersion = snapshot?.stateVersion
   useEffect(() => {
@@ -181,52 +285,15 @@ export function ClassroomViewPage() {
     }
   }, [confirmedVersion])
 
-  // SSE 觸發器：老師翻頁時立即更新；較舊或重複事件被忽略；連線斷開由 3 秒輪詢補上
+  // 預取相鄰頁圖片（快照提供後兩頁＋前一頁）：老師翻頁時立即顯示，不等待下載（REQ-008 延遲優化）
+  const prefetchKey = (snapshot?.prefetchImageUrls ?? []).join('|')
   useEffect(() => {
-    if (!classroomId) return undefined
-    const source = new EventSource(classroomApi.eventStreamUrl(classroomId, guestId))
-    const onState = (event: MessageEvent) => {
-      let isSharedEvent = false
-      let isActivityEvent = false
-      try {
-        const payload = JSON.parse(String(event.data)) as {
-          stateVersion?: number
-          type?: string
-        }
-        if (
-          typeof payload.stateVersion === 'number' &&
-          payload.stateVersion < stateVersionRef.current
-        ) {
-          return
-        }
-        isSharedEvent = payload.type === 'shared-annotation'
-        isActivityEvent = payload.type === 'activity'
-      } catch {
-        // 無法解析的事件不影響同步，仍以快照校正
-      }
-      setLive(true)
-      if (isSharedEvent) {
-        // 共享標註變更不影響頁碼版本，只重整共享層（REQ-011 即時同步）
-        void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
-        return
-      }
-      if (isActivityEvent) {
-        // 簽到發布／結束／人數變更不影響頁碼版本，只重整活動（REQ-014 即時同步）
-        void queryClient.invalidateQueries({ queryKey: ['activities', classroomId] })
-        return
-      }
-      void queryClient.invalidateQueries({
-        queryKey: ['classroom-snapshot', classroomId, guestId],
-      })
+    if (!prefetchKey) return
+    for (const url of prefetchKey.split('|')) {
+      const image = new Image()
+      image.src = url
     }
-    source.addEventListener('state', onState)
-    source.onopen = () => setLive(true)
-    source.onerror = () => setLive(false)
-    return () => {
-      source.removeEventListener('state', onState)
-      source.close()
-    }
-  }, [classroomId, guestId, queryClient])
+  }, [prefetchKey])
 
   const loadError = snapshotQuery.error
   // 401／403 屬授權失效：即使保留舊快照資料也不得繼續顯示（不冒用，REQ-009）
@@ -366,15 +433,35 @@ export function ClassroomViewPage() {
           flexShrink: 0,
         }}
       >
-        <div style={{ minWidth: 0 }}>
-          <Text fz={14} c="#5D7184">
-            {data?.courseName ?? '即時課堂'}
-          </Text>
-          <Text fz={24} fw={700} c="#17324D" truncate>
-            {classroom?.name ?? '課堂'}
-          </Text>
-        </div>
+        <Group gap="md" wrap="nowrap" style={{ minWidth: 0 }}>
+          <Button
+            variant="default"
+            leftSection={<IconDoorExit size={18} aria-hidden />}
+            onClick={() => setLeaveConfirmOpen(true)}
+            aria-label="暫離課堂"
+          >
+            暫離
+          </Button>
+          <div style={{ minWidth: 0 }}>
+            <Text fz={14} c="#5D7184">
+              {data?.courseName ?? '即時課堂'}
+            </Text>
+            <Text fz={24} fw={700} c="#17324D" truncate>
+              {classroom?.name ?? '課堂'}
+            </Text>
+          </div>
+        </Group>
         <Group gap="md" wrap="nowrap">
+          {!isFullscreen ? (
+            <Button
+              variant="light"
+              color="teal"
+              leftSection={<IconMaximize size={18} aria-hidden />}
+              onClick={enterFullscreen}
+            >
+              全屏顯示
+            </Button>
+          ) : null}
           {statusPill}
           {snapshot ? (
             <Text fz={16} fw={600} c="#17324D" style={{ whiteSpace: 'nowrap' }}>
@@ -556,6 +643,16 @@ export function ClassroomViewPage() {
           </Group>
         </Stack>
       </Modal>
+
+      <ConfirmDialog
+        opened={leaveConfirmOpen}
+        onClose={() => setLeaveConfirmOpen(false)}
+        title="暫離課堂"
+        message="確定要暫離課堂嗎？你可以隨時透過課堂碼或課程頁再次進入。"
+        confirmLabel="暫離"
+        cancelLabel="繼續觀看"
+        onConfirm={handleLeaveConfirm}
+      />
     </Box>
   )
 }

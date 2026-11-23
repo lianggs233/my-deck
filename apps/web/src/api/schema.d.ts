@@ -1137,6 +1137,8 @@ export interface components {
             pageImageUrl?: string | null;
             /** Pagethumburl */
             pageThumbUrl?: string | null;
+            /** Prefetchimageurls */
+            prefetchImageUrls?: string[];
         };
         /** ClassroomSnapshotResponse */
         ClassroomSnapshotResponse: {

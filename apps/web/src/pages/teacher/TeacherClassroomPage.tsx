@@ -40,6 +40,7 @@ import { PageHeading } from '../../components/ui/PageHeading'
 import { SharedAnnotationLayer } from '../../components/ui/SharedAnnotationLayer'
 import { SlideCanvas } from '../../components/ui/SlideCanvas'
 import { StatusPill } from '../../components/ui/StatusPill'
+import { useClassroomChannel } from '../../hooks/useClassroomChannel'
 import type {
   AnnotationPosition,
   ClassroomDetail,
@@ -108,16 +109,35 @@ export function TeacherClassroomPage() {
     staleTime: 60_000,
   })
 
-  // 畫布共享層只顯示可見標註；隱藏項目由「管理共享標註」處理
+  // 即時通道：優先 WebSocket，降級 SSE，心跳逾時再降級輪詢（REQ-008 延遲優化）；
+  // 學生留言／標註變更即時重整共享層（REQ-011 即時同步）
+  const channel = useClassroomChannel({
+    classroomId,
+    enabled: Boolean(classroomId),
+    onEvent: (payload) => {
+      if (payload.type === 'shared-annotation') {
+        invalidateShared()
+      }
+      if (payload.type === 'activity') {
+        // 學生簽到／活動狀態變更即時重整（REQ-014）
+        invalidateActivities()
+      }
+    },
+  })
+
+  // 畫布共享層只顯示可見標註；隱藏項目由「管理共享標註」處理；
+  // 推送通道失效（降級輪詢）時開 3 秒輪詢兜底，避免學生留言要手動刷新才看到
   const sharedQuery = useQuery({
     queryKey: ['shared-annotations', classroomId, classroom?.pageIndex ?? 0],
     queryFn: () => sharedAnnotationApi.list(classroomId, classroom?.pageIndex ?? 0),
     enabled: Boolean(classroom),
+    refetchInterval: online && !channel.live ? 3000 : false,
   })
   const manageQuery = useQuery({
     queryKey: ['shared-annotations-manage', classroomId, classroom?.pageIndex ?? 0, manageFilter],
     queryFn: () => sharedAnnotationApi.list(classroomId, classroom?.pageIndex ?? 0, manageFilter),
     enabled: manageOpened && Boolean(classroom),
+    refetchInterval: online && !channel.live ? 3000 : false,
   })
   const permissionsQuery = useQuery({
     queryKey: ['share-permissions', classroomId],
@@ -157,37 +177,8 @@ export function TeacherClassroomPage() {
     void queryClient.invalidateQueries({ queryKey: ['activity-results', classroomId] })
   }
 
-  // SSE 觸發器：學生留言／標註變更即時重整共享層（REQ-011 即時同步）；輪詢由查詢本身補上
-  useEffect(() => {
-    if (!classroomId) return undefined
-    const source = new EventSource(classroomApi.eventStreamUrl(classroomId))
-    const onState = (event: MessageEvent) => {
-      try {
-        const payload = JSON.parse(String(event.data)) as { type?: string }
-        if (payload.type === 'shared-annotation') {
-          void queryClient.invalidateQueries({ queryKey: ['shared-annotations', classroomId] })
-          void queryClient.invalidateQueries({
-            queryKey: ['shared-annotations-manage', classroomId],
-          })
-        }
-        if (payload.type === 'activity') {
-          // 學生簽到／活動狀態變更即時重整（REQ-014）
-          void queryClient.invalidateQueries({ queryKey: ['activities', classroomId] })
-          void queryClient.invalidateQueries({ queryKey: ['activity-results', classroomId] })
-        }
-      } catch {
-        // 無法解析的事件不影響控制頁，重新整理時以伺服器資料為準
-      }
-    }
-    source.addEventListener('state', onState)
-    return () => {
-      source.removeEventListener('state', onState)
-      source.close()
-    }
-  }, [classroomId, queryClient])
-
   // 連線狀態（TASK-146／147）：離線停用即時操作；恢復連線時立即以伺服器最新狀態校正
-  // （SSE 無回放，離線期間的共享標註／簽到變更須主動重新拉取）
+  // （推送通道無回放，離線期間的共享標註／簽到變更須主動重新拉取）
   useEffect(() => {
     const handleOnline = () => {
       setOnline(true)

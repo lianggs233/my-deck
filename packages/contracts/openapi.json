@@ -3317,6 +3317,13 @@
               }
             ],
             "title": "Pagethumburl"
+          },
+          "prefetchImageUrls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Prefetchimageurls"
           }
         },
         "additionalProperties": false,

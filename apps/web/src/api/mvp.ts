@@ -412,6 +412,7 @@ function toSnapshot(snapshot: ApiClassroomSnapshot): ClassroomSnapshotState {
     status: snapshot.status as ClassroomSnapshotState['status'],
     pageImageUrl: snapshot.pageImageUrl ?? undefined,
     pageThumbUrl: snapshot.pageThumbUrl ?? undefined,
+    prefetchImageUrls: snapshot.prefetchImageUrls ?? [],
   }
 }
 
@@ -516,6 +517,13 @@ export const classroomApi = {
   eventStreamUrl(classroomId: string, guestId?: string | null): string {
     const query = guestId ? `?guestId=${encodeURIComponent(guestId)}` : ''
     return `/api/v1/classrooms/${classroomId}/events${query}`
+  },
+
+  /** 即時事件 WebSocket 位址：代理環境（Cloudflare Tunnel）下優先於 SSE */
+  wsUrl(classroomId: string, guestId?: string | null): string {
+    const query = guestId ? `?guestId=${encodeURIComponent(guestId)}` : ''
+    const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    return `${scheme}://${window.location.host}/api/v1/classrooms/${classroomId}/ws${query}`
   },
 }
 

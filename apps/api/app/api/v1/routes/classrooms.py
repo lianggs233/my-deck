@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator
 from datetime import timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -55,6 +55,7 @@ from app.schemas.classroom import (
     ParticipantSummary,
 )
 from app.services.realtime import realtime_hub
+from app.services.sessions import get_valid_session
 
 from .coursewares import READY_STATUSES, _course_for_member, _course_for_teacher
 
@@ -117,14 +118,32 @@ def _participant_summary(participant: ClassroomParticipant) -> ParticipantSummar
 
 
 async def _snapshot(db: DbDep, classroom: Classroom) -> ClassroomSnapshot:
-    page = (
-        await db.execute(
-            select(CoursewarePage).where(
-                CoursewarePage.courseware_id == classroom.courseware_id,
-                CoursewarePage.page_index == classroom.page_index,
+    # 一次查詢取目前頁＋相鄰頁（後兩頁＋前一頁），相鄰頁供學生端預取降低翻頁延遲
+    adjacent_indexes = [
+        classroom.page_index,
+        classroom.page_index + 1,
+        classroom.page_index + 2,
+        classroom.page_index - 1,
+    ]
+    rows = (
+        (
+            await db.execute(
+                select(CoursewarePage).where(
+                    CoursewarePage.courseware_id == classroom.courseware_id,
+                    CoursewarePage.page_index.in_(adjacent_indexes),
+                )
             )
         )
-    ).scalar_one_or_none()
+        .scalars()
+        .all()
+    )
+    by_index = {page.page_index: page for page in rows}
+    page = by_index.get(classroom.page_index)
+    prefetch_urls = [
+        f"/api/v1/media/{by_index[index].full_key}"
+        for index in (classroom.page_index + 1, classroom.page_index + 2, classroom.page_index - 1)
+        if index in by_index
+    ]
     return ClassroomSnapshot(
         page_index=classroom.page_index,
         page_count=classroom.page_count,
@@ -132,6 +151,7 @@ async def _snapshot(db: DbDep, classroom: Classroom) -> ClassroomSnapshot:
         status=classroom.status,
         page_image_url=f"/api/v1/media/{page.full_key}" if page is not None else None,
         page_thumb_url=f"/api/v1/media/{page.thumb_key}" if page is not None else None,
+        prefetch_image_urls=prefetch_urls,
     )
 
 
@@ -572,13 +592,24 @@ async def turn_page(
     )
     await idem.store(db, status_code=200, payload=body)
     await db.commit()
-    # 推送給已訂閱的學生／訪客（SSE）：翻頁即時同步，輪詢作後備
+    # 推送給已訂閱的學生／訪客（WS／SSE）：翻頁即時同步，輪詢作後備；
+    # 事件直接附新頁圖片位址，學生端不必再取一次快照即可換頁（REQ-008 延遲優化）
+    page = (
+        await db.execute(
+            select(CoursewarePage).where(
+                CoursewarePage.courseware_id == classroom.courseware_id,
+                CoursewarePage.page_index == classroom.page_index,
+            )
+        )
+    ).scalar_one_or_none()
     realtime_hub.publish(
         f"classroom:{classroom.id}",
         {
             "pageIndex": body.page_index,
             "pageCount": body.page_count,
             "stateVersion": body.state_version,
+            "pageImageUrl": f"/api/v1/media/{page.full_key}" if page is not None else None,
+            "pageThumbUrl": f"/api/v1/media/{page.thumb_key}" if page is not None else None,
         },
     )
     return body
@@ -736,7 +767,9 @@ async def classroom_events(
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=15)
                 except TimeoutError:
-                    yield ": keep-alive\n\n"
+                    # 用 ping 事件而非註解行：EventSource 不為註解派發事件，
+                    # 前端降級檢測需要可觀測的心跳（REQ-008 降級偵測）
+                    yield "event: ping\ndata: {}\n\n"
                     continue
                 yield f"event: state\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
 
@@ -749,3 +782,72 @@ async def classroom_events(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# WebSocket 關閉碼（自訂 4xxx）：供前端區分降級原因
+WS_CLOSE_NOT_FOUND = 4404
+WS_CLOSE_SESSION_INVALID = 4401
+WS_CLOSE_FORBIDDEN = 4403
+
+
+@router.websocket("/classrooms/{classroom_id}/ws")
+async def classroom_ws(
+    websocket: WebSocket,
+    classroom_id: str,
+    db: DbDep,
+    guest_id: str | None = Query(default=None, alias="guestId"),
+) -> None:
+    """課堂狀態推送（WebSocket）：與 SSE 同一 realtime_hub，訊息為事件 JSON 本身。
+
+    Cloudflare Tunnel 等代理會緩衝 SSE 長連線但不緩衝 WS；前端優先 WS，
+    失敗時降級 SSE→輪詢（REQ-008 延遲優化）。授權與 SSE 端點一致：
+    老師放行，學生／訪客須已加入；帶失效 session cookie 以 4401 關閉。
+    心跳：每 15 秒送 {"type":"ping"}，兼作前端降級檢測與斷線偵測。
+    """
+    settings = get_settings()
+    raw_token = websocket.cookies.get(settings.session_cookie_name)
+    session = await get_valid_session(db, raw_token) if raw_token else None
+    user: User | None = None
+    if session is not None:
+        user = (
+            await db.execute(select(User).where(User.id == session.user_id))
+        ).scalar_one_or_none()
+
+    # 先 accept 再以自訂碼關閉：瀏覽器才能在 onclose 拿到關閉原因
+    await websocket.accept()
+    classroom = await db.get(Classroom, classroom_id)
+    if classroom is None:
+        await websocket.close(code=WS_CLOSE_NOT_FOUND)
+        return
+    if raw_token and user is None:
+        await websocket.close(code=WS_CLOSE_SESSION_INVALID)
+        return
+    try:
+        await _resolve_viewer(db, classroom, user, guest_id)
+    except ApiError:
+        await websocket.close(code=WS_CLOSE_FORBIDDEN)
+        return
+
+    initial = {
+        "pageIndex": classroom.page_index,
+        "pageCount": classroom.page_count,
+        "stateVersion": classroom.state_version,
+    }
+    await websocket.send_text(json.dumps(initial, ensure_ascii=False))
+    # 訂閱期間不再使用資料庫；主動歸還連線，避免大量訂閱者佔滿連線池（NFR-004）
+    await db.close()
+
+    async with realtime_hub.subscribe(f"classroom:{classroom_id}") as queue:
+        try:
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15)
+                except TimeoutError:
+                    await websocket.send_text(json.dumps({"type": "ping"}))
+                    continue
+                await websocket.send_text(json.dumps(event, ensure_ascii=False))
+        except WebSocketDisconnect:
+            pass
+        except RuntimeError:
+            # 連線已由對端關閉（send 失敗）：結束訂閱即可
+            pass

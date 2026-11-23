@@ -196,6 +196,8 @@ export interface ClassroomSnapshotState {
   status: ClassroomStatus
   pageImageUrl?: string
   pageThumbUrl?: string
+  /** 相鄰頁圖片位址（後兩頁＋前一頁）：學生端預取，老師翻頁時立即顯示 */
+  prefetchImageUrls?: string[]
 }
 
 export interface ClassroomJoinResult {

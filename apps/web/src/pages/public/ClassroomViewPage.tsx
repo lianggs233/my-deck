@@ -73,6 +73,8 @@ export function ClassroomViewPage() {
   const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement))
   /** 進入課堂後只嘗試一次預設全屏（瀏覽器要求使用者手勢，被阻擋時靜默降級） */
   const fullscreenTriedRef = useRef(false)
+  /** 投影片全屏目標：只放大投影片（含標註層），不含頂欄與其他卡片 */
+  const slideFsRef = useRef<HTMLDivElement>(null)
   /** 已確認的最新狀態版本：較舊的推送事件直接忽略，不回退到舊頁（TASK-141） */
   const stateVersionRef = useRef(0)
 
@@ -261,11 +263,11 @@ export function ClassroomViewPage() {
   useEffect(() => {
     if (fullscreenTriedRef.current || !snapshot) return
     fullscreenTriedRef.current = true
-    void document.documentElement.requestFullscreen?.().catch(() => undefined)
+    void slideFsRef.current?.requestFullscreen?.().catch(() => undefined)
   }, [snapshot])
 
   const enterFullscreen = () => {
-    void document.documentElement.requestFullscreen?.().catch(() => undefined)
+    void slideFsRef.current?.requestFullscreen?.().catch(() => undefined)
   }
 
   /** 暫離：確認後先退出全屏再離開；學生回其首頁、訪客回加入頁 */
@@ -476,61 +478,63 @@ export function ClassroomViewPage() {
           {data && snapshot && !blockingError ? (
             <Stack gap="lg">
               <Paper radius="lg" bg="#FFFFFF" p="md" style={{ border: '1px solid #D8E2E8' }}>
-                <SlideCanvas
-                  pageNumber={snapshot.pageIndex + 1}
-                  totalPages={snapshot.pageCount}
-                  imageUrl={snapshot.pageImageUrl}
-                  interactive={canShare}
-                  onClick={(event) => {
-                    if (!canShare) return
-                    setDraftPosition(canvasPosition(event))
-                    setNewContent('')
-                  }}
-                  draftMarker={
-                    draftPosition ? (
-                      <Box
-                        aria-hidden
-                        style={{
-                          position: 'absolute',
-                          left: `${draftPosition.x * 100}%`,
-                          top: `${draftPosition.y * 100}%`,
-                          transform: 'translate(-50%, -50%)',
-                          width: 28,
-                          height: 28,
-                          borderRadius: '50%',
-                          background: 'rgba(18, 131, 111, 0.35)',
-                          border: '2px dashed #12836F',
-                          zIndex: 4,
-                          pointerEvents: 'none',
-                        }}
-                      />
-                    ) : undefined
-                  }
-                  annotations={
-                    <>
-                      {annotationDots}
-                      {isStudentParticipant ? (
-                        <SharedAnnotationLayer
-                          annotations={sharedItems}
-                          canShare={canShare}
-                          currentUserId={user?.id ?? ''}
-                          isTeacher={false}
-                          busy={sharedBusy}
-                          onAddComment={(groupId, content) =>
-                            createSharedMutation.mutate({ groupId, content })
-                          }
-                          onEdit={(annotation, content) =>
-                            updateSharedMutation.mutate({ annotation, content })
-                          }
-                          onDelete={(annotation) => deleteSharedMutation.mutate(annotation)}
-                          onReply={() => undefined}
-                          onEditReply={() => undefined}
-                          onDeleteReply={() => undefined}
+                <div ref={slideFsRef} className="md-slide-fs">
+                  <SlideCanvas
+                    pageNumber={snapshot.pageIndex + 1}
+                    totalPages={snapshot.pageCount}
+                    imageUrl={snapshot.pageImageUrl}
+                    interactive={canShare}
+                    onClick={(event) => {
+                      if (!canShare) return
+                      setDraftPosition(canvasPosition(event))
+                      setNewContent('')
+                    }}
+                    draftMarker={
+                      draftPosition ? (
+                        <Box
+                          aria-hidden
+                          style={{
+                            position: 'absolute',
+                            left: `${draftPosition.x * 100}%`,
+                            top: `${draftPosition.y * 100}%`,
+                            transform: 'translate(-50%, -50%)',
+                            width: 28,
+                            height: 28,
+                            borderRadius: '50%',
+                            background: 'rgba(18, 131, 111, 0.35)',
+                            border: '2px dashed #12836F',
+                            zIndex: 4,
+                            pointerEvents: 'none',
+                          }}
                         />
-                      ) : null}
-                    </>
-                  }
-                />
+                      ) : undefined
+                    }
+                    annotations={
+                      <>
+                        {annotationDots}
+                        {isStudentParticipant ? (
+                          <SharedAnnotationLayer
+                            annotations={sharedItems}
+                            canShare={canShare}
+                            currentUserId={user?.id ?? ''}
+                            isTeacher={false}
+                            busy={sharedBusy}
+                            onAddComment={(groupId, content) =>
+                              createSharedMutation.mutate({ groupId, content })
+                            }
+                            onEdit={(annotation, content) =>
+                              updateSharedMutation.mutate({ annotation, content })
+                            }
+                            onDelete={(annotation) => deleteSharedMutation.mutate(annotation)}
+                            onReply={() => undefined}
+                            onEditReply={() => undefined}
+                            onDeleteReply={() => undefined}
+                          />
+                        ) : null}
+                      </>
+                    }
+                  />
+                </div>
               </Paper>
 
               {ended ? (

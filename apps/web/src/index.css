@@ -121,3 +121,15 @@ a:hover {
       background-color 150ms ease;
   }
 }
+
+/* 投影片全屏：只放大投影片（含標註層），深色背景置中，16:9 最大化 */
+.md-slide-fs:fullscreen {
+  background: #10222e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-slide-fs:fullscreen > section {
+  width: 100%;
+  max-width: calc(100vh * 16 / 9);
+}

@@ -30,6 +30,7 @@ from app.db.models import (
     Classroom,
     ClassroomJoinAttempt,
     ClassroomParticipant,
+    ClassroomShareGrant,
     Course,
     Courseware,
     CoursewarePage,
@@ -252,6 +253,17 @@ async def _resolve_participant(
     try:
         async with db.begin_nested():
             db.add(participant)
+            if user_id is not None:
+                # 新進入學生預設擁有共享標註權限（2026-11-23 確認），老師可於權限管理收回；
+                # 收回後保留 grant 記錄（granted=False），重新加入不會恢復
+                db.add(
+                    ClassroomShareGrant(
+                        id=new_id("grt"),
+                        classroom_id=classroom.id,
+                        student_id=user_id,
+                        granted=True,
+                    )
+                )
             await db.flush()
     except IntegrityError:
         # 併發加入：唯一索引保證同一课堂同一身份只有一條參與者記錄

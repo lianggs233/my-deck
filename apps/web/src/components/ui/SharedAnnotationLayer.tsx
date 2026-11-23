@@ -361,7 +361,11 @@ export function SharedAnnotationLayer({
                 {items.length}
               </button>
             </Popover.Target>
-            <Popover.Dropdown>
+            <Popover.Dropdown
+              // React 合成事件沿元件樹冒泡（portal 不影響）：必須攔截，
+              // 否則點擊留言內容／輸入框會冒泡到 SlideCanvas 誤開「新增共享標註」Modal
+              onClick={(event) => event.stopPropagation()}
+            >
               <Stack gap="sm" style={{ maxHeight: 320, overflowY: 'auto' }}>
                 {items.map((annotation, index) => (
                   <div key={annotation.id}>

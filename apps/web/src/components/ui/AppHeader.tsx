@@ -18,6 +18,9 @@ const navItems: Record<UserRole, { label: string; to: string; active: boolean }[
   ],
 }
 
+/** 2026-11-23 依使用者要求暫時隱藏頂欄中間導航（我的課程／課堂記錄／學習中心），後續做對應功能時改回 true 恢復 */
+const SHOW_HEADER_NAV = false
+
 /** 內頁頂欄（高 96）：品牌 + 中間導航 + 帳號選單（OL-001） */
 export function AppHeader() {
   const { user, logout } = useAuth()
@@ -37,27 +40,29 @@ export function AppHeader() {
           <BrandMark variant="light" />
         </UnstyledButton>
 
-        <Group gap={48} wrap="nowrap">
-          {navItems[user.role].map((item) =>
-            item.active ? (
-              <Button
-                key={item.label}
-                variant="transparent"
-                px={0}
-                fz={20}
-                fw={700}
-                c="#0B6455"
-                onClick={() => navigate(item.to)}
-              >
-                {item.label}
-              </Button>
-            ) : (
-              <Text key={item.label} fz={20} fw={500} c="#5D7184">
-                {item.label}
-              </Text>
-            ),
-          )}
-        </Group>
+        {SHOW_HEADER_NAV ? (
+          <Group gap={48} wrap="nowrap">
+            {navItems[user.role].map((item) =>
+              item.active ? (
+                <Button
+                  key={item.label}
+                  variant="transparent"
+                  px={0}
+                  fz={20}
+                  fw={700}
+                  c="#0B6455"
+                  onClick={() => navigate(item.to)}
+                >
+                  {item.label}
+                </Button>
+              ) : (
+                <Text key={item.label} fz={20} fw={500} c="#5D7184">
+                  {item.label}
+                </Text>
+              ),
+            )}
+          </Group>
+        ) : null}
 
         <Menu width={224} position="bottom-end" radius="lg" shadow="md" withinPortal>
           <Menu.Target>

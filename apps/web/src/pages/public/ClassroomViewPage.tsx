@@ -32,6 +32,7 @@ import { SlideCanvas } from '../../components/ui/SlideCanvas'
 import { StatusPill } from '../../components/ui/StatusPill'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { useClassroomChannel } from '../../hooks/useClassroomChannel'
+import { formatTimeHK } from '../../utils/datetime'
 import { homePath } from '../../utils/home-path'
 import type {
   AnnotationPosition,
@@ -564,12 +565,7 @@ export function ClassroomViewPage() {
                   <div className="md-notice" role="status">
                     <IconCheckbox size={18} stroke={1.8} aria-hidden style={{ flexShrink: 0 }} />
                     <Text fz={16} fw={600}>
-                      已完成簽到（
-                      {new Date(openCheckin.mySubmission.submittedAt).toLocaleTimeString('zh-TW', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                      ）
+                      已完成簽到（{formatTimeHK(openCheckin.mySubmission.submittedAt)}）
                     </Text>
                   </div>
                 ) : (

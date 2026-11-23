@@ -13,6 +13,7 @@ import { IconEye, IconEyeOff } from '@tabler/icons-react'
 import { useState, type FormEvent } from 'react'
 
 import type { SharedAnnotation, SharedReply } from '../../types/domain'
+import { formatTimeHK } from '../../utils/datetime'
 
 interface SharedAnnotationLayerProps {
   /** 目前頁的共享標註（學生只會收到 VISIBLE） */
@@ -34,12 +35,6 @@ interface SharedAnnotationLayerProps {
   /** Popover 彈層 portal 目標（觀看頁投影片全屏容器；全屏時 body 上的彈層不可見）。
    *  未提供時維持預設 portal 到 body（如老師授課控制頁無全屏） */
   portalTarget?: HTMLElement | null
-}
-
-function formatTime(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' })
 }
 
 function RoleBadge({ role }: { role: string }) {
@@ -127,7 +122,7 @@ function MessageItem({
         </Text>
         <RoleBadge role={annotation.author.role} />
         <Text fz={12} c="#5D7184">
-          {formatTime(annotation.createdAt)}
+          {formatTimeHK(annotation.createdAt)}
         </Text>
         {annotation.visibility === 'HIDDEN' ? (
           <Badge size="sm" color="gray" variant="light">
@@ -254,7 +249,7 @@ function ReplyItem({
           老師回覆
         </Badge>
         <Text fz={12} c="#5D7184">
-          {formatTime(reply.createdAt)}
+          {formatTimeHK(reply.createdAt)}
         </Text>
       </Group>
       {editing ? (

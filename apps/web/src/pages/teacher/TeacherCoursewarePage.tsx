@@ -12,14 +12,11 @@ import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { PageHeading } from '../../components/ui/PageHeading'
 import { SectionHeader } from '../../components/ui/SectionHeader'
 import { SlideCanvas } from '../../components/ui/SlideCanvas'
+import { formatTimeHK } from '../../utils/datetime'
 
 function formatSize(bytes: number) {
   if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`
   return `${Math.max(1, Math.round(bytes / 1_000))} KB`
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' })
 }
 
 const secondaryButton = {
@@ -266,7 +263,7 @@ export function TeacherCoursewarePage() {
                 <Text c={attempt.status === 'SUCCESS' ? '#0B6455' : '#B42318'} fw={600}>
                   {attempt.summary}
                 </Text>
-                <Text c="#5D7184">{formatTime(attempt.finishedAt)}</Text>
+                <Text c="#5D7184">{formatTimeHK(attempt.finishedAt)}</Text>
               </Group>
             </Paper>
           ))}

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.core.config import get_settings
+
+# outbox 為本機開發取代真實 SMS／Email 的檔案，統一以香港時區標記，方便對照看板工時
+HK_TZ = ZoneInfo("Asia/Hong_Kong")
 
 
 def _outbox_dir() -> Path:
@@ -18,10 +22,10 @@ def append_outbox(message: dict[str, Any]) -> Path:
     """把待發送訊息寫入本機 outbox（MVP 以檔案取代真實 SMS／Email）。"""
     outbox_dir = _outbox_dir()
     stamped = {
-        "createdAt": datetime.now(UTC).isoformat(),
+        "createdAt": datetime.now(HK_TZ).isoformat(),
         **message,
     }
-    file_name = f"{datetime.now(UTC):%Y%m%d%H%M%S%f}-{message.get('channel', 'msg')}.json"
+    file_name = f"{datetime.now(HK_TZ):%Y%m%d%H%M%S%f}-{message.get('channel', 'msg')}.json"
     path = outbox_dir / file_name
     path.write_text(json.dumps(stamped, ensure_ascii=False, indent=2), encoding="utf-8")
     return path

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     BigInteger,
@@ -16,8 +16,21 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
 
 from app.db.base import Base, utcnow
+
+
+class UTCDateTime(TypeDecorator[datetime]):
+    """SQLite 不保存時區資訊，讀回時統一補上 UTC，避免 API 輸出 naive datetime。"""
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_result_value(self, value: datetime | None, dialect: object) -> datetime | None:
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value
 
 
 class User(Base):
@@ -29,7 +42,7 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(50))
     role: Mapped[str] = mapped_column(String(10))  # TEACHER / STUDENT
     password_hash: Mapped[str] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class Session(Base):
@@ -39,10 +52,10 @@ class Session(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     csrf_token_hash: Mapped[str] = mapped_column(String(64))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    absolute_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    absolute_expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
 
 
 class VerificationChallenge(Base):
@@ -56,9 +69,9 @@ class VerificationChallenge(Base):
     code_hash: Mapped[str] = mapped_column(String(64))
     channel: Mapped[str] = mapped_column(String(10))  # SMS / EMAIL
     attempts: Mapped[int] = mapped_column(Integer, default=0)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    used_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class LoginAttempt(Base):
@@ -68,7 +81,7 @@ class LoginAttempt(Base):
     identifier: Mapped[str] = mapped_column(String(255), index=True)
     ip: Mapped[str] = mapped_column(String(64), index=True)
     success: Mapped[bool] = mapped_column(Boolean)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class CourseJoinAttempt(Base):
@@ -80,7 +93,7 @@ class CourseJoinAttempt(Base):
     student_id: Mapped[str] = mapped_column(String(40), index=True)
     ip: Mapped[str] = mapped_column(String(64), index=True)
     success: Mapped[bool] = mapped_column(Boolean)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class Course(Base):
@@ -90,7 +103,7 @@ class Course(Base):
     name: Mapped[str] = mapped_column(String(50))
     code: Mapped[str] = mapped_column(String(8), unique=True, index=True)
     teacher_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class CourseMembership(Base):
@@ -102,7 +115,7 @@ class CourseMembership(Base):
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
     student_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    joined_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class Upload(Base):
@@ -116,7 +129,7 @@ class Upload(Base):
     status: Mapped[str] = mapped_column(String(20), default="CREATED")  # CREATED / RECEIVED
     object_key: Mapped[str] = mapped_column(String(255))
     sha256_expected: Mapped[str | None] = mapped_column(String(64), default=None)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class Courseware(Base):
@@ -135,13 +148,9 @@ class Courseware(Base):
     failure_message: Mapped[str | None] = mapped_column(String(255), default=None)
     failure_detail: Mapped[str | None] = mapped_column(Text, default=None)
     warning: Mapped[str | None] = mapped_column(String(255), default=None)
-    conversion_started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), default=None
-    )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    conversion_started_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
 
 class CoursewarePage(Base):
@@ -172,8 +181,8 @@ class ConversionAttempt(Base):
     status: Mapped[str] = mapped_column(String(20))  # RUNNING / SUCCEEDED / FAILED
     error_code: Mapped[str | None] = mapped_column(String(50), default=None)
     error_message: Mapped[str | None] = mapped_column(String(255), default=None)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    started_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
 
 
 class Annotation(Base):
@@ -188,11 +197,9 @@ class Annotation(Base):
     x: Mapped[float] = mapped_column(Float)
     y: Mapped[float] = mapped_column(Float)
     version: Mapped[int] = mapped_column(Integer, default=1)
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
 
 class IdempotencyRecord(Base):
@@ -209,7 +216,7 @@ class IdempotencyRecord(Base):
     request_hash: Mapped[str] = mapped_column(String(64))
     response_status: Mapped[int | None] = mapped_column(Integer, default=None)
     response_body: Mapped[str | None] = mapped_column(Text, default=None)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class Classroom(Base):
@@ -242,8 +249,8 @@ class Classroom(Base):
     page_index: Mapped[int] = mapped_column(Integer, default=0)
     page_count: Mapped[int] = mapped_column(Integer)
     state_version: Mapped[int] = mapped_column(Integer, default=1)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    started_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    ended_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
 
 
 class GuestIdentity(Base):
@@ -253,8 +260,8 @@ class GuestIdentity(Base):
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     display_name: Mapped[str] = mapped_column(String(50))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class ClassroomParticipant(Base):
@@ -288,8 +295,8 @@ class ClassroomParticipant(Base):
     )
     role: Mapped[str] = mapped_column(String(10))  # STUDENT / GUEST
     display_name: Mapped[str] = mapped_column(String(50))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class ClassroomJoinAttempt(Base):
@@ -301,7 +308,7 @@ class ClassroomJoinAttempt(Base):
     user_id: Mapped[str | None] = mapped_column(String(40), nullable=True, default=None, index=True)
     ip: Mapped[str] = mapped_column(String(64), index=True)
     success: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class SharedAnnotationGroup(Base):
@@ -314,7 +321,7 @@ class SharedAnnotationGroup(Base):
     page_index: Mapped[int] = mapped_column(Integer)
     x: Mapped[float] = mapped_column(Float)
     y: Mapped[float] = mapped_column(Float)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class SharedAnnotation(Base):
@@ -334,10 +341,8 @@ class SharedAnnotation(Base):
     # VISIBLE / HIDDEN（老師管理）/ DELETED（作者刪除）/ CLEARED（老師清除整頁，不可恢復）
     status: Mapped[str] = mapped_column(String(16), default="VISIBLE", index=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
 
 class SharedAnnotationReply(Base):
@@ -352,11 +357,9 @@ class SharedAnnotationReply(Base):
     teacher_id: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"), index=True)
     content: Mapped[str] = mapped_column(String(100))
     version: Mapped[int] = mapped_column(Integer, default=1)
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
 
 class ClassroomShareGrant(Base):
@@ -369,10 +372,8 @@ class ClassroomShareGrant(Base):
     classroom_id: Mapped[str] = mapped_column(String(40), ForeignKey("classrooms.id"), index=True)
     student_id: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"), index=True)
     granted: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
 
 class ClassroomActivity(Base):
@@ -398,9 +399,9 @@ class ClassroomActivity(Base):
     options_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     correct_option_ids_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     created_by: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"))
-    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
-    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    published_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    closed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 
 class ActivitySubmission(Base):
@@ -418,4 +419,4 @@ class ActivitySubmission(Base):
     classroom_id: Mapped[str] = mapped_column(String(40), ForeignKey("classrooms.id"), index=True)
     student_id: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"), index=True)
     answers_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
-    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    submitted_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)

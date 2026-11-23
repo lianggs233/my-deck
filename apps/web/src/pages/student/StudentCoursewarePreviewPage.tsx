@@ -25,6 +25,7 @@ import { annotationApi, coursewareApi } from '../../api/mvp'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
 import { SlideCanvas } from '../../components/ui/SlideCanvas'
 import { StatusPill } from '../../components/ui/StatusPill'
+import { formatTimeHK } from '../../utils/datetime'
 import type { Annotation, AnnotationPosition } from '../../types/domain'
 
 const secondaryButton = {
@@ -54,10 +55,6 @@ function positionLabel(position: AnnotationPosition) {
   const horizontal = position.x >= 0.5 ? '右' : '左'
   const vertical = position.y >= 0.5 ? '下方' : '上方'
   return `頁面${horizontal}${vertical}方`
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' })
 }
 
 /** 學生課件預覽：逐頁瀏覽 + 個人標註（OL-010 編輯器 / OL-011 詳情） */
@@ -492,7 +489,7 @@ export function StudentCoursewarePreviewPage() {
                 個人標註
               </Title>
               <Text fz={16} c="#5D7184" mt={4}>
-                第 {detail.pageIndex + 1} 頁 · 今天 {formatTime(detail.updatedAt)}
+                第 {detail.pageIndex + 1} 頁 · 今天 {formatTimeHK(detail.updatedAt)}
               </Text>
             </div>
             <StatusPill tone="blue">僅本人可見</StatusPill>

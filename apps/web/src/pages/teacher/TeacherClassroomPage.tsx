@@ -41,6 +41,7 @@ import { SharedAnnotationLayer } from '../../components/ui/SharedAnnotationLayer
 import { SlideCanvas } from '../../components/ui/SlideCanvas'
 import { StatusPill } from '../../components/ui/StatusPill'
 import { useClassroomChannel } from '../../hooks/useClassroomChannel'
+import { formatTimeHK } from '../../utils/datetime'
 import type {
   AnnotationPosition,
   ClassroomDetail,
@@ -712,11 +713,7 @@ export function TeacherClassroomPage() {
                         ) : (
                           checkinResultsQuery.data.signed.map((student) => (
                             <Text key={student.studentId} fz={14} c="#5D7184">
-                              {student.displayName}・
-                              {new Date(student.submittedAt).toLocaleTimeString('zh-TW', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {student.displayName}・{formatTimeHK(student.submittedAt)}
                             </Text>
                           ))
                         )}

@@ -10,8 +10,9 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 5173,
+      allowedHosts: ['.trycloudflare.com'],
       proxy: {
-        '/api': { target: apiTarget, changeOrigin: true },
+        '/api': { target: apiTarget, changeOrigin: true, ws: true },
         '/docs': { target: apiTarget, changeOrigin: true },
         '/openapi.json': { target: apiTarget, changeOrigin: true },
         '/socket.io': { target: apiTarget, changeOrigin: true, ws: true },

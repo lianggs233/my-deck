@@ -24,6 +24,7 @@ import {
   IconListCheck,
   IconLock,
   IconMessagePlus,
+  IconFlagCheck,
   IconTrash,
   IconUsers,
   IconWifiOff,
@@ -88,6 +89,8 @@ export function TeacherClassroomPage() {
   /** 右側資訊面板開關：關閉時投影片佔滿全寬（使用者 2026-11-20 指示） */
   const [panelOpen, setPanelOpen] = useState(true)
   const [checkinConfirmOpened, setCheckinConfirmOpened] = useState(false)
+  // REQ-017：結束授課確認交互
+  const [endConfirmOpened, setEndConfirmOpened] = useState(false)
   const [checkinIdemKey, setCheckinIdemKey] = useState('')
   /** 網絡連線狀態（TASK-146／147）：離線停用即時操作並提示，恢復時以伺服器最新狀態為準 */
   const [online, setOnline] = useState(() => navigator.onLine)
@@ -329,6 +332,16 @@ export function TeacherClassroomPage() {
     },
   })
 
+  // REQ-017：確認結束後由服務端保存結束狀態；成功後以伺服器資料重整，不只改前端狀態
+  const endMutation = useMutation({
+    mutationFn: () => classroomApi.end(classroomId),
+    onSuccess: async () => {
+      setEndConfirmOpened(false)
+      await queryClient.invalidateQueries({ queryKey: ['classroom', courseId, classroomId] })
+    },
+    onError: (cause) => showError(errorMessage(cause, '結束課堂失敗，請稍後再試。')),
+  })
+
   const classroomLoadError = classroomQuery.error
   useEffect(() => {
     if (classroomLoadError) {
@@ -356,8 +369,11 @@ export function TeacherClassroomPage() {
   const currentPage = pages[classroom.pageIndex]
   const code = joinInfoQuery.data?.code ?? classroom.code ?? ''
   const joinUrl = joinInfoQuery.data?.joinUrl ?? (code ? `/join/${code}` : '')
-  const canPrev = classroom.pageIndex > 0 && !turnMutation.isPending && online
-  const canNext = classroom.pageIndex < classroom.pageCount - 1 && !turnMutation.isPending && online
+  // REQ-017：課堂結束後停止翻頁、標註、簽到等全部互動輸入
+  const ended = classroom.status === 'ENDED'
+  const canPrev = classroom.pageIndex > 0 && !turnMutation.isPending && online && !ended
+  const canNext =
+    classroom.pageIndex < classroom.pageCount - 1 && !turnMutation.isPending && online && !ended
   const sharedItems = sharedQuery.data?.items ?? []
   const manageItems = manageQuery.data?.items ?? []
   const permissionItems = permissionsQuery.data ?? []
@@ -393,11 +409,26 @@ export function TeacherClassroomPage() {
           </Button>
         </Stack>
         <Group gap="md">
-          <StatusPill tone="mint">課堂進行中</StatusPill>
+          {ended ? (
+            <StatusPill tone="gray">課堂已結束</StatusPill>
+          ) : (
+            <StatusPill tone="mint">課堂進行中</StatusPill>
+          )}
           {!online ? (
             <StatusPill tone="red" leftSection={<IconWifiOff size={16} aria-hidden />}>
               已離線，顯示最後確認狀態
             </StatusPill>
+          ) : null}
+          {!ended ? (
+            <Button
+              color="red"
+              variant="light"
+              leftSection={<IconFlagCheck size={16} aria-hidden />}
+              disabled={!online || endMutation.isPending}
+              onClick={() => setEndConfirmOpened(true)}
+            >
+              結束授課
+            </Button>
           ) : null}
           <ActionIcon
             variant={panelOpen ? 'light' : 'subtle'}
@@ -433,7 +464,7 @@ export function TeacherClassroomPage() {
               pageNumber={classroom.pageIndex + 1}
               totalPages={classroom.pageCount}
               imageUrl={currentPage?.imageUrl || undefined}
-              interactive={annotateMode}
+              interactive={annotateMode && !ended}
               onClick={(event) => {
                 if (!annotateMode) return
                 setDraftPosition(canvasPosition(event))
@@ -479,7 +510,14 @@ export function TeacherClassroomPage() {
                 />
               }
             />
-            {annotateMode ? (
+            {ended ? (
+              <div className="md-notice md-notice-blue" role="status">
+                <Text fz={16} fw={600}>
+                  課堂已結束，翻頁、標註與簽到等互動已全部停止；課堂記錄保留可查看。
+                </Text>
+              </div>
+            ) : null}
+            {annotateMode && !ended ? (
               <Text fz={14} c="#0B6455" ta="center" role="status">
                 標註模式：點擊投影片任何位置建立共享標註
               </Text>
@@ -528,7 +566,7 @@ export function TeacherClassroomPage() {
                       type="button"
                       aria-label={`跳至第 ${page.pageNumber} 頁`}
                       aria-current={isCurrent ? 'page' : undefined}
-                      disabled={turnMutation.isPending || isCurrent || !online}
+                      disabled={turnMutation.isPending || isCurrent || !online || ended}
                       onClick={() =>
                         turnMutation.mutate({ direction: 'GOTO', pageIndex: page.pageIndex })
                       }
@@ -541,8 +579,11 @@ export function TeacherClassroomPage() {
                         border: isCurrent ? '3px solid #12836F' : '1px solid #D8E2E8',
                         background: '#FFFFFF',
                         cursor:
-                          turnMutation.isPending || isCurrent || !online ? 'default' : 'pointer',
-                        opacity: (turnMutation.isPending || !online) && !isCurrent ? 0.6 : 1,
+                          turnMutation.isPending || isCurrent || !online || ended
+                            ? 'default'
+                            : 'pointer',
+                        opacity:
+                          (turnMutation.isPending || !online || ended) && !isCurrent ? 0.6 : 1,
                         overflow: 'hidden',
                         position: 'relative',
                       }}
@@ -684,16 +725,18 @@ export function TeacherClassroomPage() {
                 </>
               ) : (
                 <>
-                  <Button
-                    leftSection={<IconClipboardCheck size={16} aria-hidden />}
-                    disabled={!online}
-                    onClick={() => {
-                      setCheckinIdemKey(crypto.randomUUID())
-                      setCheckinConfirmOpened(true)
-                    }}
-                  >
-                    發起簽到
-                  </Button>
+                  {ended ? null : (
+                    <Button
+                      leftSection={<IconClipboardCheck size={16} aria-hidden />}
+                      disabled={!online}
+                      onClick={() => {
+                        setCheckinIdemKey(crypto.randomUUID())
+                        setCheckinConfirmOpened(true)
+                      }}
+                    >
+                      發起簽到
+                    </Button>
+                  )}
                   {latestActivity?.status === 'CLOSED' ? (
                     checkinResultsQuery.isPending ? (
                       <Loader aria-label="簽到結果載入中" mx="auto" />
@@ -749,6 +792,7 @@ export function TeacherClassroomPage() {
                 variant={annotateMode ? 'filled' : 'default'}
                 styles={annotateMode ? undefined : secondaryButton}
                 leftSection={<IconMessagePlus size={16} aria-hidden />}
+                disabled={ended}
                 onClick={() => {
                   setAnnotateMode((value) => !value)
                   setDraftPosition(null)
@@ -760,6 +804,7 @@ export function TeacherClassroomPage() {
                 variant="default"
                 styles={secondaryButton}
                 leftSection={<IconUsers size={16} aria-hidden />}
+                disabled={ended}
                 onClick={() => setPermissionOpened(true)}
               >
                 共享權限
@@ -768,6 +813,7 @@ export function TeacherClassroomPage() {
                 variant="default"
                 styles={secondaryButton}
                 leftSection={<IconListCheck size={16} aria-hidden />}
+                disabled={ended}
                 onClick={() => {
                   setManageFilter('ALL')
                   setManageOpened(true)
@@ -944,6 +990,18 @@ export function TeacherClassroomPage() {
         danger
         loading={clearPageMutation.isPending}
         onConfirm={() => clearPageMutation.mutate()}
+      />
+
+      <ConfirmDialog
+        opened={endConfirmOpened}
+        onClose={() => setEndConfirmOpened(false)}
+        title="結束授課？"
+        message="結束後，學生與訪客將立即看到課堂已結束，無法再翻頁、留言、回覆或簽到；課堂記錄不會刪除。確定結束目前課堂？"
+        confirmLabel="確認結束"
+        cancelLabel="取消"
+        danger
+        loading={endMutation.isPending}
+        onConfirm={() => endMutation.mutate()}
       />
 
       <ConfirmDialog

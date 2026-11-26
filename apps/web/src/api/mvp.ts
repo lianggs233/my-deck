@@ -62,6 +62,15 @@ type ApiClassroomStartResponse = Schemas['ClassroomStartResponse']
 type ApiClassroomDetailResponse = Schemas['ClassroomDetailResponse']
 type ApiJoinInfo = Schemas['JoinInfo']
 type ApiPageState = Schemas['PageStateResponse']
+type ApiEndClassroomResponse = Schemas['EndClassroomResponse']
+
+/** 結束課堂結果（REQ-017）：retentionUntil 為課後保留期截止（結束起 168 小時） */
+export interface ClassroomEndResult {
+  status: string
+  endedAt: string
+  retentionUntil: string
+  stateVersion: number
+}
 type ApiClassroomLiveState = Schemas['ClassroomLiveState']
 type ApiParticipant = Schemas['ParticipantSummary']
 type ApiClassroomSnapshot = Schemas['ClassroomSnapshot']
@@ -435,6 +444,19 @@ export const classroomApi = {
       `/courses/${courseId}/classrooms/${classroomId}`,
     )
     return { classroom: toClassroom(data.classroom), courseName: data.courseName }
+  },
+
+  /** 結束授課（REQ-017）：僅負責老師；重複呼叫回同一結果，不重置結束時間 */
+  async end(classroomId: string): Promise<ClassroomEndResult> {
+    const data = await apiFetch<ApiEndClassroomResponse>(`/classrooms/${classroomId}/end`, {
+      method: 'POST',
+    })
+    return {
+      status: data.status,
+      endedAt: data.endedAt,
+      retentionUntil: data.retentionUntil,
+      stateVersion: data.stateVersion,
+    }
   },
 
   /** 加入資訊（課堂碼＋加入連結）：僅負責老師可讀 */

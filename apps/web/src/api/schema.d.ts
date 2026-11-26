@@ -551,6 +551,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/classrooms/{classroom_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End Classroom
+         * @description REQ-017：負責老師結束課堂。
+         *
+         *     重複結束／冪等鍵重放回原結果，不重置結束時間（TASK-298）；結束只改狀態，
+         *     不刪除任何課堂記錄；翻頁、共享標註、活動等寫入端點各自以 409 CLASSROOM_ENDED 拒絕。
+         */
+        post: operations["end_classroom_api_v1_classrooms__classroom_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/classrooms/join": {
         parameters: {
             query?: never;
@@ -1388,6 +1411,28 @@ export interface components {
         CsrfResponse: {
             /** Csrftoken */
             csrfToken: string;
+        };
+        /**
+         * EndClassroomResponse
+         * @description REQ-017：結束課堂結果；retention_until 為課後內容保留期截止（結束起 168 小時）。
+         */
+        EndClassroomResponse: {
+            /** Classroomid */
+            classroomId: string;
+            /** Status */
+            status: string;
+            /**
+             * Endedat
+             * Format: date-time
+             */
+            endedAt: string;
+            /**
+             * Retentionuntil
+             * Format: date-time
+             */
+            retentionUntil: string;
+            /** Stateversion */
+            stateVersion: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2854,6 +2899,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageStateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    end_classroom_api_v1_classrooms__classroom_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                classroom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndClassroomResponse"];
                 };
             };
             /** @description Validation Error */

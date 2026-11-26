@@ -24,7 +24,7 @@ import {
   IconListCheck,
   IconLock,
   IconMessagePlus,
-  IconPlayerStop,
+  IconFlagCheck,
   IconTrash,
   IconUsers,
   IconWifiOff,
@@ -423,7 +423,7 @@ export function TeacherClassroomPage() {
             <Button
               color="red"
               variant="light"
-              leftSection={<IconPlayerStop size={16} aria-hidden />}
+              leftSection={<IconFlagCheck size={16} aria-hidden />}
               disabled={!online || endMutation.isPending}
               onClick={() => setEndConfirmOpened(true)}
             >

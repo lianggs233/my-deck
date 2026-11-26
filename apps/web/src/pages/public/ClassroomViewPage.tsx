@@ -68,8 +68,10 @@ export function ClassroomViewPage() {
   const [online, setOnline] = useState(() => navigator.onLine)
   const [draftPosition, setDraftPosition] = useState<AnnotationPosition | null>(null)
   const [newContent, setNewContent] = useState('')
-  /** 暫離確認對話框 */
+  /** 離開確認對話框 */
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
+  /** REQ-017：課堂結束後詢問是否離開（每次結束只提示一次） */
+  const [endedPromptOpen, setEndedPromptOpen] = useState(false)
   /** 瀏覽器全屏狀態（Esc 等預設行為退出時由 fullscreenchange 同步） */
   const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement))
   /** 進入課堂後只嘗試一次預設全屏（瀏覽器要求使用者手勢，被阻擋時靜默降級） */
@@ -151,6 +153,19 @@ export function ClassroomViewPage() {
   const snapshot = data?.snapshot
   const participant = data?.participant
   const ended = snapshot?.status === 'ENDED'
+
+  // REQ-017：課堂一結束即自動退出全屏，並彈出「是否離開」提示（每次結束只提示一次）
+  const endedPromptedRef = useRef(false)
+  useEffect(() => {
+    if (!ended) return
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined)
+    }
+    if (!endedPromptedRef.current) {
+      endedPromptedRef.current = true
+      setEndedPromptOpen(true)
+    }
+  }, [ended])
 
   // 學生本人個人標註（唯讀）；訪客與未加入者不查詢
   const isStudentParticipant = participant?.role === 'STUDENT'
@@ -264,20 +279,22 @@ export function ClassroomViewPage() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
-  // 進入課堂後嘗試預設全屏一次（瀏覽器要求使用者手勢；被阻擋時靜默降級，可用「全屏顯示」手動進入）
+  // 進入課堂後嘗試預設全屏一次（瀏覽器要求使用者手勢；被阻擋時靜默降級，可用「全屏顯示」手動進入）；
+  // 課堂已結束時不自動全屏（否則全屏元素會蓋住 portal 到 body 的「課堂已結束」提示）
   useEffect(() => {
-    if (fullscreenTriedRef.current || !snapshot || !slideFsEl) return
+    if (fullscreenTriedRef.current || !snapshot || !slideFsEl || ended) return
     fullscreenTriedRef.current = true
     void slideFsEl.requestFullscreen?.().catch(() => undefined)
-  }, [snapshot, slideFsEl])
+  }, [snapshot, slideFsEl, ended])
 
   const enterFullscreen = () => {
     void slideFsEl?.requestFullscreen?.().catch(() => undefined)
   }
 
-  /** 暫離：確認後先退出全屏再離開；學生回其首頁、訪客回加入頁 */
+  /** 離開：確認後先退出全屏再離開；學生回其首頁、訪客回加入頁 */
   const handleLeaveConfirm = () => {
     setLeaveConfirmOpen(false)
+    setEndedPromptOpen(false)
     const exit = document.fullscreenElement
       ? document.exitFullscreen().catch(() => undefined)
       : Promise.resolve()
@@ -450,9 +467,9 @@ export function ClassroomViewPage() {
             variant="default"
             leftSection={<IconDoorExit size={18} aria-hidden />}
             onClick={() => setLeaveConfirmOpen(true)}
-            aria-label="暫離課堂"
+            aria-label="離開課堂"
           >
-            暫離
+            離開
           </Button>
           <div style={{ minWidth: 0 }}>
             <Text fz={14} c="#5D7184">
@@ -658,10 +675,20 @@ export function ClassroomViewPage() {
       <ConfirmDialog
         opened={leaveConfirmOpen}
         onClose={() => setLeaveConfirmOpen(false)}
-        title="暫離課堂"
-        message="確定要暫離課堂嗎？你可以隨時透過課堂碼或課程頁再次進入。"
-        confirmLabel="暫離"
+        title="離開課堂"
+        message="確定要離開課堂嗎？課堂進行中時，你可以隨時透過課堂碼或課程頁再次進入。"
+        confirmLabel="離開"
         cancelLabel="繼續觀看"
+        onConfirm={handleLeaveConfirm}
+      />
+
+      <ConfirmDialog
+        opened={endedPromptOpen}
+        onClose={() => setEndedPromptOpen(false)}
+        title="課堂已結束"
+        message="老師已結束本次課堂，頁面無法再同步。是否離開課堂？"
+        confirmLabel="離開"
+        cancelLabel="留下查看"
         onConfirm={handleLeaveConfirm}
       />
     </Box>

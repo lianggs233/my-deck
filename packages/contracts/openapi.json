@@ -1510,6 +1510,49 @@
         }
       }
     },
+    "/api/v1/classrooms/{classroom_id}/end": {
+      "post": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "End Classroom",
+        "description": "REQ-017：負責老師結束課堂。\n\n重複結束／冪等鍵重放回原結果，不重置結束時間（TASK-298）；結束只改狀態，\n不刪除任何課堂記錄；翻頁、共享標註、活動等寫入端點各自以 409 CLASSROOM_ENDED 拒絕。",
+        "operationId": "end_classroom_api_v1_classrooms__classroom_id__end_post",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndClassroomResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/classrooms/join": {
       "post": {
         "tags": [
@@ -4058,6 +4101,43 @@
           "csrfToken"
         ],
         "title": "CsrfResponse"
+      },
+      "EndClassroomResponse": {
+        "properties": {
+          "classroomId": {
+            "type": "string",
+            "title": "Classroomid"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Endedat"
+          },
+          "retentionUntil": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Retentionuntil"
+          },
+          "stateVersion": {
+            "type": "integer",
+            "title": "Stateversion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "classroomId",
+          "status",
+          "endedAt",
+          "retentionUntil",
+          "stateVersion"
+        ],
+        "title": "EndClassroomResponse",
+        "description": "REQ-017：結束課堂結果；retention_until 為課後內容保留期截止（結束起 168 小時）。"
       },
       "HTTPValidationError": {
         "properties": {

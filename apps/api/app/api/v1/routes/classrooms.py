@@ -48,6 +48,7 @@ from app.schemas.classroom import (
     ClassroomStartRequest,
     ClassroomStartResponse,
     ClassroomSummary,
+    EndClassroomResponse,
     JoinInfo,
     JoinInfoResponse,
     PageStateResponse,
@@ -64,6 +65,8 @@ router = APIRouter(tags=["classrooms"])
 MAX_CODE_ATTEMPTS = 5
 CLASSROOM_LIVE = "LIVE"
 CLASSROOM_ENDED = "ENDED"
+# REQ-018：課後內容保留期自結束起 168 小時（7 天）
+RETENTION_PERIOD = timedelta(hours=168)
 CLASSROOM_CODE_LENGTH = 6
 
 
@@ -610,6 +613,66 @@ async def turn_page(
             "stateVersion": body.state_version,
             "pageImageUrl": f"/api/v1/media/{page.full_key}" if page is not None else None,
             "pageThumbUrl": f"/api/v1/media/{page.thumb_key}" if page is not None else None,
+        },
+    )
+    return body
+
+
+@router.post("/classrooms/{classroom_id}/end", response_model=EndClassroomResponse)
+async def end_classroom(
+    classroom_id: str,
+    request: Request,
+    teacher: TeacherUser,
+    db: DbDep,
+    _: CsrfDep,
+) -> EndClassroomResponse | JSONResponse:
+    """REQ-017：負責老師結束課堂。
+
+    重複結束／冪等鍵重放回原結果，不重置結束時間（TASK-298）；結束只改狀態，
+    不刪除任何課堂記錄；翻頁、共享標註、活動等寫入端點各自以 409 CLASSROOM_ENDED 拒絕。
+    """
+    classroom = await db.get(Classroom, classroom_id)
+    if classroom is None:
+        raise ApiError(404, "CLASSROOM_NOT_FOUND", "課堂不存在。")
+    if classroom.teacher_id != teacher.id:
+        raise ApiError(403, "CLASSROOM_FORBIDDEN", "只有負責老師可以結束課堂。")
+
+    idem = await idempotency_manager(request, teacher.id)
+    replay = await idem.lookup(db)
+    if replay is not None:
+        return replay
+
+    if classroom.status == CLASSROOM_ENDED:
+        # 冪等：重複結束回傳原結束結果，不更新結束時間、不再推送事件
+        assert classroom.ended_at is not None
+        return EndClassroomResponse(
+            classroom_id=classroom.id,
+            status=CLASSROOM_ENDED,
+            ended_at=classroom.ended_at,
+            retention_until=classroom.ended_at + RETENTION_PERIOD,
+            state_version=classroom.state_version,
+        )
+
+    ended_at = utcnow()
+    classroom.status = CLASSROOM_ENDED
+    classroom.ended_at = ended_at
+    classroom.state_version += 1
+    body = EndClassroomResponse(
+        classroom_id=classroom.id,
+        status=CLASSROOM_ENDED,
+        ended_at=ended_at,
+        retention_until=ended_at + RETENTION_PERIOD,
+        state_version=classroom.state_version,
+    )
+    await idem.store(db, status_code=200, payload=body)
+    await db.commit()
+    # 推送結束事件：學生／訪客端即時顯示「課堂已結束」並停止互動（REQ-017）
+    realtime_hub.publish(
+        f"classroom:{classroom.id}",
+        {
+            "type": "classroom-ended",
+            "status": CLASSROOM_ENDED,
+            "stateVersion": body.state_version,
         },
     )
     return body

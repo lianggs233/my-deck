@@ -51,6 +51,16 @@ class JoinInfoResponse(ApiModel):
     classroom_status: str
 
 
+class EndClassroomResponse(ApiModel):
+    """REQ-017：結束課堂結果；retention_until 為課後內容保留期截止（結束起 168 小時）。"""
+
+    classroom_id: str
+    status: str  # ENDED
+    ended_at: datetime
+    retention_until: datetime
+    state_version: int
+
+
 class PageTurnRequest(ApiModel):
     direction: Literal["NEXT", "PREV", "GOTO"]
     page_index: int | None = Field(default=None, ge=0)

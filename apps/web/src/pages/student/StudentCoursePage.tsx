@@ -1,8 +1,9 @@
 import { Button, Group, Loader, Paper, Stack, Tabs, Text } from '@mantine/core'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
+import { ApiError } from '../../api/http'
 import { classroomApi, courseApi, coursewareApi } from '../../api/mvp'
 import { CoursewareRow } from '../../components/ui/CoursewareRow'
 import { useErrorAlert } from '../../components/ui/error-alert-context'
@@ -33,10 +34,19 @@ export function StudentCoursePage() {
     refetchInterval: 15_000,
   })
   const { showError } = useErrorAlert()
+  const queryClient = useQueryClient()
   const joinMutation = useMutation({
     mutationFn: (classroomId: string) => classroomApi.joinFromCourse(classroomId),
     onSuccess: (result) => navigate(`/classrooms/${result.classroom.id}`),
-    onError: (cause) => showError(cause instanceof Error ? cause.message : '加入課堂失敗'),
+    onError: (cause) => {
+      // 橫幅為快取資料時可能點到已結束課堂：提示並立即重整橫幅，讓入口消失
+      if (cause instanceof ApiError && cause.code === 'CLASSROOM_ENDED') {
+        showError('課堂已結束，無法進入。')
+        void queryClient.invalidateQueries({ queryKey: ['classroom-active', courseId] })
+        return
+      }
+      showError(cause instanceof Error ? cause.message : '加入課堂失敗')
+    },
   })
   const courseLoadError = courseQuery.error
   useEffect(() => {

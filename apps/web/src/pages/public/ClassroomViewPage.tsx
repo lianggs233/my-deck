@@ -154,10 +154,12 @@ export function ClassroomViewPage() {
   const participant = data?.participant
   const ended = snapshot?.status === 'ENDED'
 
-  // REQ-017：課堂一結束即自動退出全屏，並彈出「是否離開」提示（每次結束只提示一次）
+  // REQ-017：課堂一結束即自動退出全屏，並彈出「是否離開」提示（每次結束只提示一次）；
+  // 同時清掉課程頁「課堂進行中」橫幅的快取，避免離開後回到課程頁仍看到已結束課堂的入口
   const endedPromptedRef = useRef(false)
   useEffect(() => {
     if (!ended) return
+    queryClient.removeQueries({ queryKey: ['classroom-active'] })
     if (document.fullscreenElement) {
       void document.exitFullscreen().catch(() => undefined)
     }
@@ -165,7 +167,7 @@ export function ClassroomViewPage() {
       endedPromptedRef.current = true
       setEndedPromptOpen(true)
     }
-  }, [ended])
+  }, [ended, queryClient])
 
   // 學生本人個人標註（唯讀）；訪客與未加入者不查詢
   const isStudentParticipant = participant?.role === 'STUDENT'
